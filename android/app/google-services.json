@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "913168016292",
+    "project_id": "care-cub",
+    "storage_bucket": "care-cub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:913168016292:android:addb1b427a11f995511731",
+        "android_client_info": {
+          "package_name": "com.example.carecub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDW8FMwcbYcO4xNVq0e4trdjSFCW_B-W5s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
