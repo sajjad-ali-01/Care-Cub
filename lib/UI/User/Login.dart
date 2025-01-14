@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../Logic/FirebaseAuth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'BottomNavigationBar.dart';
+import '../BottomNavigationBar.dart';
 import 'ForgotPassword.dart';
 
 class Login extends StatefulWidget {

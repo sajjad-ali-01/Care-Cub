@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 //import 'User/Login.dart';
-import 'User/BottomNavigationBar.dart';
+import 'BottomNavigationBar.dart';
 import 'WelcomeScreen.dart';
 
 class SplashScreen extends StatefulWidget {

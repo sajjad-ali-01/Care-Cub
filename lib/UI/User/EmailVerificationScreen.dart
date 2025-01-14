@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:carecub/UI/User/Login.dart';
 
-import 'BottomNavigationBar.dart';
+import '../BottomNavigationBar.dart';
 
 
 class EmailVerificationScreen extends StatefulWidget {
