@@ -2,7 +2,7 @@ import 'package:carecub/UI/Splash%20screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-import 'UI/BottomNavigationBar.dart';
+import 'UI/User/BottomNavigationBar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
