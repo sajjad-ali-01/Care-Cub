@@ -1,4 +1,5 @@
 import 'package:carecub/UI/Home.dart';
+import 'package:carecub/chat_page.dart';
 import 'package:flutter/material.dart';
 
 class Tabs extends StatefulWidget {
@@ -14,9 +15,9 @@ class _TabsState extends State<Tabs> {
   // List of pages for navigation
   final List<Widget> body = [
     Home(),
-    Icon(Icons.track_changes, size: 100),
     Icon(Icons.account_circle, size: 100),
     Icon(Icons.notifications, size: 100),
+    ChatPage(),
     Icon(Icons.settings, size: 100),
   ];
 
@@ -51,8 +52,8 @@ class _TabsState extends State<Tabs> {
             icon: Icon(Icons.account_circle),
           ),
           BottomNavigationBarItem(
-            label: "Ale",
-            icon: Icon(Icons.notifications),
+            label: "Community",
+            icon: Icon(Icons.comment),
           ),
           BottomNavigationBarItem(
             label: "Settings",

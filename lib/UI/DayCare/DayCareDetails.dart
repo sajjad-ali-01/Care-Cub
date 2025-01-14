@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'BookingScreen.dart';
 
 class DayCareDetailScreen extends StatelessWidget {
   final String name;
@@ -98,7 +98,7 @@ class DayCareDetailScreen extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => BookingScreen(
                         daycareName: name,
-                        daycareImage: 'assets/images/Baby.png',
+                        daycareImage: 'assets/images/daycareCenter2.webp',
                       ),
                     ),
                   );
@@ -138,167 +138,7 @@ class DayCareDetailScreen extends StatelessWidget {
 }
 
 
-class BookingScreen extends StatefulWidget {
-  final String daycareName;
-  final String daycareImage;
 
-  BookingScreen({required this.daycareName, required this.daycareImage});
-
-  @override
-  _BookingScreenState createState() => _BookingScreenState();
-}
-
-class _BookingScreenState extends State<BookingScreen> {
-  DateTime? selectedDate;
-  final TextEditingController childNameController = TextEditingController();
-  final TextEditingController contactController = TextEditingController();
-  String? selectedGender;
-
-  void _showDatePicker() async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
-    );
-    if (pickedDate != null) {
-      setState(() {
-        selectedDate = pickedDate;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Booking - ${widget.daycareName}'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Daycare Image and Name
-            Center(
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      widget.daycareImage,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.daycareName,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Child Name Field
-            TextField(
-              controller: childNameController,
-              decoration: InputDecoration(
-                labelText: 'Child\'s Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Gender Dropdown
-            DropdownButtonFormField<String>(
-              value: selectedGender,
-              items: ['Male', 'Female', 'Other']
-                  .map((gender) => DropdownMenuItem(
-                value: gender,
-                child: Text(gender),
-              ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedGender = value;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Gender',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Contact Number Field
-            TextField(
-              controller: contactController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Contact Number',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Calendar Field
-            GestureDetector(
-              onTap: _showDatePicker,
-              child: AbsorbPointer(
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: selectedDate == null
-                        ? 'Select Date'
-                        : 'Selected Date: ${selectedDate!.toLocal()}'.split(' ')[0],
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Submit Button
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  if (childNameController.text.isEmpty ||
-                      contactController.text.isEmpty ||
-                      selectedGender == null ||
-                      selectedDate == null) {
-                    // Show error if any field is missing
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please fill all the fields')),
-                    );
-                  } else {
-                    // Handle booking submission
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Booking Confirmed for ${childNameController.text}!'),
-                      ),
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                ),
-                child: Text(
-                  'Confirm Booking',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 
 // Activities Screen with Activity Cards

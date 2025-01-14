@@ -1,5 +1,5 @@
-import 'package:chattingapp/models/chat_model.dart';
-import 'package:chattingapp/widgets/message_widget.dart';
+import 'package:carecub/models/chat_model.dart';
+import 'package:carecub/widgets/message_widget.dart';
 import 'package:flutter/material.dart';
 
 class ChatPage extends StatefulWidget {
@@ -13,7 +13,8 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.orangeAccent,
+
+      backgroundColor: Colors.deepOrange.shade700,
       bottomNavigationBar: _chatTextField(),
       body: Column(
         children: [
@@ -37,6 +38,7 @@ class _ChatPageState extends State<ChatPage> {
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
+                        color: Color(0xFFFFEBFF)
                       ),
                     ),
                   ],
@@ -44,12 +46,12 @@ class _ChatPageState extends State<ChatPage> {
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
           Expanded(
             child: Container(
               width: double.infinity,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFFFFEBFF),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -64,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }Widget _chatTextField(){
     return Container(
-      color: Colors.white,
+      color: Color(0xFFFFEBFF),
       padding: EdgeInsets.only(left: 20, right: 20, top: 10, bottom: MediaQuery.of(context).viewInsets.bottom + 14),
       child: Container(
         height: 60,

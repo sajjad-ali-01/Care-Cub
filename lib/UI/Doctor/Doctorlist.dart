@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'Doctor details.dart';
-
 class DoctorList extends StatelessWidget {
   final List<Map<String, String>> dayCareCenters = [
     {
@@ -42,8 +41,10 @@ class DoctorList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFFFEBFF),
       appBar: AppBar(
-        title: Text('Book Doctor`s Appontment'),
+        backgroundColor: Colors.deepOrange.shade500,
+        title: Text('Book Doctor`s Appontment',style: TextStyle(color: Color(0xFFFFEBFF)),),
       ),
       body: ListView.builder(
         itemCount: dayCareCenters.length,

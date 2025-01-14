@@ -1,5 +1,7 @@
 import 'package:carecub/UI/DayCare/DayCareListing.dart';
+import 'package:carecub/chat_page.dart';
 import 'package:flutter/material.dart';
+import 'Doctor/Doctorlist.dart';
 import 'User/ChildDetailsScreen.dart';
 
 class Home extends StatefulWidget {
@@ -189,21 +191,27 @@ class _HomeState extends State<Home> {
                     },
                   ),
                   buildCard(
-                    "Express",
-                    Icons.water_drop,
+                    "Doctor Appointments",
+                    Icons.local_hospital_outlined,
                     Color(0xFFFFEBFF),
                     Colors.red.shade600, // Shadow color
                         () {
-                      print("Express card tapped");
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => DoctorList()),
+                          );
                     },
                   ),
                   buildCard(
-                    "Nappy",
-                    Icons.baby_changing_station,
+                    "Community",
+                    Icons.comment,
                     Color(0xFFDFFAFF),
                     Colors.cyan, // Shadow color
                         () {
-                      print("Nappy card tapped");
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => ChatPage()),
+                          );
                     },
                   ),
                   buildCard(
