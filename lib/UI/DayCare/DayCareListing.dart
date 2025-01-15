@@ -42,8 +42,10 @@ class DayCarelisting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFFFEBFF),
       appBar: AppBar(
-        title: Text('DayCare Centers'),
+        backgroundColor: Colors.deepOrange.shade500,
+        title: Text('DayCare Centers',style: TextStyle(color: Color(0xFFFFEBFF))),
       ),
       body: ListView.builder(
         itemCount: dayCareCenters.length,

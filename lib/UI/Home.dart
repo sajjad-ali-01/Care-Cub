@@ -1,8 +1,11 @@
 import 'package:carecub/UI/DayCare/DayCareListing.dart';
-import 'package:carecub/chat_page.dart';
+import 'package:carecub/UI/Community/chat_page.dart';
 import 'package:flutter/material.dart';
+import 'CryTranslation/cryUI.dart';
 import 'Doctor/Doctorlist.dart';
-import 'User/ChildDetailsScreen.dart';
+import 'Nutrition Guide/NutritionGuidanceScreen.dart';
+import 'TrakingsScreens/TrackersList.dart';
+import 'User/ProfileScreen.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -14,7 +17,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
       child: Container(
         decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -26,9 +29,11 @@ class _HomeState extends State<Home> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 30,),
+            SizedBox(height: 30),
             GestureDetector(
-              onTap: (){},
+              onTap: (){
+                Navigator.push(context, MaterialPageRoute(builder: (context)=>UserProfileScreen()));
+              },
               child: Container(
                 width: MediaQuery.of(context).size.width, // Set the desired width
                 height: 120.0,
@@ -50,9 +55,8 @@ class _HomeState extends State<Home> {
                     SizedBox(width: 20,),
                     Image.asset(
                       'assets/images/cute_baby.png', // Replace with your image path
-                      width: 120, // Adjust the width as needed
-                      height: 120, // Adjust the height as needed
-                      // Adjust how the image fits in the container
+                      width: 120,
+                      height: 120,
                     ),
                     SizedBox(width: 10,),
                     Column(
@@ -75,7 +79,9 @@ class _HomeState extends State<Home> {
                           ),
                         ),
                         ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context)=>UserProfileScreen()));
+                          },
                           icon: Icon(Icons.account_circle, color: Colors.black54),
                           label: Text(
                             "Profile",
@@ -91,13 +97,14 @@ class _HomeState extends State<Home> {
                         )
                       ],
                     ),
+
                   ],
                 ),
               ),
             ),
             GestureDetector(
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => ChildDetailsScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => CryCaptureScreen()));
               },
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -183,11 +190,11 @@ class _HomeState extends State<Home> {
                 children: [
                   buildCard(
                     'Nutrition Guid',
-                    Icons.fastfood,
-                    Colors.pink.shade100,
-                    Colors.blue, // Shadow color
+                    Icons.apple,
+                    Colors.red.shade100,
+                    Colors.pink, // Shadow color
                         () {
-
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=>NutritionGuidanceScreen()));
                     },
                   ),
                   buildCard(
@@ -215,33 +222,33 @@ class _HomeState extends State<Home> {
                     },
                   ),
                   buildCard(
-                    "Sleep",
-                    Icons.bedtime,
-                    Color(0xFFFFFFF1),
-                    Colors.orange, // Shadow color
+                    "DayCare Centers",
+                    Icons.maps_home_work_sharp,
+                    Color(0xFFE9FEEF),
+                    Colors.blue, // Shadow color
                         () {
-                      print("Sleep card tapped");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => DayCarelisting()),
+                      );
                     },
                   ),
                   buildCard(
-                    "Growth",
+                    "Trackers",
+                    Icons.track_changes,
+                    Color(0xFFFFFFF1),
+                    Colors.orange, // Shadow color
+                        () {
+                          TrackersList();
+                    },
+                  ),
+                  buildCard(
+                    "Milestone Tracking",
                     Icons.show_chart,
                     Color(0xAFFDFFD6),
                     Colors.yellow, // Shadow color
                         () {
                       print("Growth card tapped");
-                    },
-                  ),
-                  buildCard(
-                    "DayCare Centers",
-                    Icons.show_chart,
-                    Color(0xFFE9FEEF),
-                    Colors.blue, // Shadow color
-                        () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => DayCarelisting()),
-                          );
                     },
                   ),
                 ],

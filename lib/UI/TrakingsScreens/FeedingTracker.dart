@@ -93,7 +93,7 @@ class _FeedingTrackerScreenState extends State<FeedingTrackerScreen> {
             IconButton(
               icon: Icon(Icons.arrow_back, color: Colors.black),
               onPressed: () {
-                // Add back functionality if needed
+                Navigator.pop(context);
               },
             ),
             Spacer(),
@@ -208,7 +208,7 @@ class _FeedingTrackerScreenState extends State<FeedingTrackerScreen> {
               // Save routine logic
             },
             style: ElevatedButton.styleFrom(
-              primary: Color(0xFF4A148C), // Purple button
+              backgroundColor: Color(0xFF4A148C), // Purple button
               padding: EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

@@ -81,7 +81,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
               children: [
                 IconButton(
                   onPressed: () {
-                    // Add back navigation logic
+                    Navigator.pop(context);
                   },
                   icon: Icon(Icons.arrow_back, color: Colors.black),
                 ),
@@ -163,7 +163,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
               ElevatedButton(
                 onPressed: resetTimer,
                 style: ElevatedButton.styleFrom(
-                  primary: Colors.white,
+                  backgroundColor: Colors.white,
                   shape: CircleBorder(),
                   padding: EdgeInsets.all(20),
                 ),
@@ -172,7 +172,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
               ElevatedButton(
                 onPressed: isTimerRunning ? stopTimer : startTimer,
                 style: ElevatedButton.styleFrom(
-                  primary: Colors.orange,
+                  backgroundColor: Colors.orange,
                   shape: CircleBorder(),
                   padding: EdgeInsets.all(20),
                 ),
@@ -196,7 +196,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
             icon: Icon(Icons.check, color: Colors.white),
             label: Text("Save routine"),
             style: ElevatedButton.styleFrom(
-              primary: Color(0xFFB8A27D), // Matches the background
+              backgroundColor: Color(0xFFB8A27D), // Matches the background
               padding: EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

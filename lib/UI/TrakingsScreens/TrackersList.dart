@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:trackers/SleepTracking.dart';
-import 'package:trackers/FeedingTracker.dart';
-import 'package:trackers/VaccinationTracker.dart'; // Import the Vaccination Tracker screen
-
+import 'SleepTracking.dart';
+import 'FeedingTracker.dart';
+import 'VaccinationTracker.dart';
 class TrackersList extends StatelessWidget {
   // List of activities
   final List<Map<String, String>> activities = [
     {
       'title': 'Sleep Tracking',
       'description': 'Monitor and track your sleep patterns.',
-      'image': 'assets/images/sleep_tracking.jpeg',
+      'image': 'assets/images/sleep_tracking.jpg',
     },
     {
       'title': 'Feeding',
       'description': 'Keep track of feeding schedules and nutrition.',
-      'image': 'assets/images/feeding.png',
+      'image': 'assets/images/feeding.jpg',
     },
     {
       'title': 'Vaccination',
       'description': 'Stay updated with vaccination schedules.',
-      'image': 'assets/images/vaccination.jpeg',
+      'image': 'assets/images/vaccination.jpg',
     },
   ];
 

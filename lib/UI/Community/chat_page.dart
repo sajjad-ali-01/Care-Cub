@@ -1,5 +1,5 @@
-import 'package:carecub/models/chat_model.dart';
-import 'package:carecub/widgets/message_widget.dart';
+import 'chat_model.dart';
+import 'message_widget.dart';
 import 'package:flutter/material.dart';
 
 class ChatPage extends StatefulWidget {

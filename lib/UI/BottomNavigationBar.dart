@@ -1,6 +1,9 @@
 import 'package:carecub/UI/Home.dart';
-import 'package:carecub/chat_page.dart';
+import 'package:carecub/UI/Community/chat_page.dart';
 import 'package:flutter/material.dart';
+
+import 'CryTranslation/cryUI.dart';
+import 'TrakingsScreens/TrackersList.dart';
 
 class Tabs extends StatefulWidget {
   const Tabs({super.key});
@@ -15,27 +18,27 @@ class _TabsState extends State<Tabs> {
   // List of pages for navigation
   final List<Widget> body = [
     Home(),
-    Icon(Icons.account_circle, size: 100),
+    CryCaptureScreen(),
     Icon(Icons.notifications, size: 100),
     ChatPage(),
-    Icon(Icons.settings, size: 100),
+    TrackersList(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: body[currentIndex], // Display the selected page
+        child: body[currentIndex],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Ensures labels are always visible
-        backgroundColor: const Color(0xFFFFE3EC), // Light pink
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFFFFE3EC),
         currentIndex: currentIndex,
-        selectedItemColor: Colors.deepOrange, // Highlighted item color
-        unselectedItemColor: Colors.grey.shade700, // Non-selected item color
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey.shade700,
         onTap: (int newIndex) {
           setState(() {
-            currentIndex = newIndex; // Update index on tap
+            currentIndex = newIndex;
           });
         },
         items: const [
@@ -44,20 +47,20 @@ class _TabsState extends State<Tabs> {
             icon: Icon(Icons.home),
           ),
           BottomNavigationBarItem(
-            label: "Tracker",
-            icon: Icon(Icons.format_list_numbered_rtl_outlined),
+            label: "Cry AI",
+            icon: Icon(Icons.mic),
           ),
           BottomNavigationBarItem(
             label: "Nutrition AI",
-            icon: Icon(Icons.account_circle),
+            icon: Icon(Icons.apple),
           ),
           BottomNavigationBarItem(
             label: "Community",
             icon: Icon(Icons.comment),
           ),
           BottomNavigationBarItem(
-            label: "Settings",
-            icon: Icon(Icons.settings),
+            label: "Trackers",
+            icon: Icon(Icons.format_list_numbered_rtl_outlined),
           ),
         ],
       ),

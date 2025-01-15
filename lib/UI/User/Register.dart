@@ -20,12 +20,17 @@ class _RegisterState extends State<Register> {
   final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  bool _isLoading = false; // Add this to track loading state
 
   Future<void> _registerUser({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
+    setState(() {
+      _isLoading = true; // Set loading to true when registration starts
+    });
+
     try {
       // Create the user with the provided email and password
       UserCredential userCredential = await FirebaseAuth.instance
@@ -46,6 +51,7 @@ class _RegisterState extends State<Register> {
           ),
         ),
       );
+
       // Pass user data to EmailVerificationScreen
       Navigator.push(
         context,
@@ -62,14 +68,17 @@ class _RegisterState extends State<Register> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
+    } finally {
+      setState(() {
+        _isLoading = false; // Set loading to false when the process finishes
+      });
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color(0xFFFFEBFF),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -213,7 +222,9 @@ class _RegisterState extends State<Register> {
                       }
                   ),
                   SizedBox(height: 20),
-                  ElevatedButton(
+                  _isLoading
+                      ? CircularProgressIndicator() // Show the loading indicator
+                      : ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
                         await _registerUser(
@@ -231,7 +242,7 @@ class _RegisterState extends State<Register> {
                       ),
                     ),
                     child: Text(
-                      "Sign in",
+                      "Sign Up",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
