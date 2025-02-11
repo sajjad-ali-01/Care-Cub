@@ -43,12 +43,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedSplashScreen(
-      splash: Image.asset('assets/images/Animation.gif'),
+      splash: Image.asset('assets/images/CareCub_Animation.gif'),
       splashIconSize: 2500,
       centered: true,
       nextScreen: nextScreen, // Dynamic next screen
       backgroundColor: Colors.red.shade300,
-      duration: 3500,
+      duration: 2800,
     );
   }
 }

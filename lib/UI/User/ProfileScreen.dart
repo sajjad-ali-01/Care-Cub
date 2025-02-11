@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Login.dart'; // Import your Login Screen
 
@@ -27,7 +28,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   // Function to log out the current user
   void logout() async {
     await _auth.signOut();
-    // Navigate to the Login Screen after logout
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const Login()),

@@ -205,7 +205,7 @@ class _HomeState extends State<Home> {
                         () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => DoctorList()),
+                            MaterialPageRoute(builder: (context) => Doctorlist()),
                           );
                     },
                   ),
@@ -229,7 +229,7 @@ class _HomeState extends State<Home> {
                         () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => DayCarelisting()),
+                        MaterialPageRoute(builder: (context) => DayCareList()),
                       );
                     },
                   ),
@@ -239,7 +239,10 @@ class _HomeState extends State<Home> {
                     Color(0xFFFFFFF1),
                     Colors.orange, // Shadow color
                         () {
-                          TrackersList();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => DayCareList()),
+                          );
                     },
                   ),
                   buildCard(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 class BookingScreen extends StatefulWidget {
-  final String doctorName;
-  final String doctorImage;
+  final String name;
+  final String Image;
+  final String Specialization;
+  final String locations;
 
-  BookingScreen({required this.doctorName, required this.doctorImage});
+  BookingScreen({required this.name, required this.Image,required this.Specialization,required this.locations});
 
   @override
   _BookingScreenState createState() => _BookingScreenState();
@@ -27,7 +29,7 @@ class _BookingScreenState extends State<BookingScreen> {
     '3:00 PM',
   ];
 
-  void _showDatePicker() async {
+  void DatePicker() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -45,35 +47,63 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFEBFF),
+      backgroundColor: Colors.grey.shade100,//Color(0xFFFFEBFF),
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade500,
-        title: Text('Booking - ${widget.doctorName}',style: TextStyle(color: Color(0xFFFFEBFF)),),
+        backgroundColor: Colors.deepOrange.shade400,
+        title: Text('Confirm Booking',style: TextStyle(color: Color(0xFFFFEBFF)),),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Daycare Image and Name
-            Center(
-              child: Column(
-                children: [
-                  const SizedBox(height: 0),
-                  Text(
-                    widget.doctorName,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.deepOrange.shade800),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      widget.doctorImage,
-                      height: 140,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+            Card(
+              color: Colors.white,
+              elevation: 5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: AssetImage(widget.Image),
+                          radius: 30,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text(widget.Specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                              //Text(widget.locations, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    SizedBox(height: 10),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //   children: [
+                    //     Text("Experience: $experience", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    //     Text(rating, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    //   ],
+                    // ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text(widget.locations,style: TextStyle(fontSize: 16),),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -118,7 +148,7 @@ class _BookingScreenState extends State<BookingScreen> {
             const SizedBox(height: 10),
             // Calendar Field
             GestureDetector(
-              onTap: _showDatePicker,
+              onTap: DatePicker,
               child: AbsorbPointer(
                 child: TextField(
                   controller: dateController,
@@ -177,7 +207,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade300,
+                  backgroundColor: Colors.red.shade400,
                   padding: EdgeInsets.symmetric(vertical: 10, horizontal: 70),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
