@@ -1,4 +1,7 @@
+import 'package:carecub/Database/DatabaseServices.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../../Logic/Users/ParentsLogic.dart';
 import 'advanced_profile_info.dart'; // Import the Advanced Profile Info screen
 
 class EducationScreen extends StatefulWidget {
@@ -13,8 +16,19 @@ class _EducationScreenState extends State<EducationScreen> {
   final TextEditingController _collegeController = TextEditingController();
   final TextEditingController _degreeController = TextEditingController();
   final TextEditingController _graduationYearController = TextEditingController();
+  final TextEditingController _PMCNumberController = TextEditingController();
+  final User? user = FirebaseAuth.instance.currentUser;
 
   void _saveEducation() {
+    DatabaseService.AddDrEducationalInfo(
+        uid: user!.uid,
+        Edu_Country: _countryController.text,
+        Edu_City: _cityController.text,
+        College: _collegeController.text,
+        Degree: _degreeController.text,
+        GraduationYear: _graduationYearController.text,
+        PMCNumber: _PMCNumberController.text,
+    );
     if (_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Education Details Saved Successfully!")),
@@ -77,6 +91,13 @@ class _EducationScreenState extends State<EducationScreen> {
                 decoration: InputDecoration(labelText: "Graduation Year", border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
                 validator: (value) => value!.isEmpty ? "Enter your graduation year" : null,
+              ),
+              SizedBox(height: 20),
+              TextFormField(
+                controller: _PMCNumberController,
+                decoration: InputDecoration(labelText: "PMC Registration Number", border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                validator: (value) => value!.isEmpty ? "Enter your PMC Registration Number" : null,
               ),
               SizedBox(height: 30),
 

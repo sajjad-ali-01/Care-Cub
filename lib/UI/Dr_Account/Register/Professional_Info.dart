@@ -178,6 +178,16 @@ class _SignUpStep2State extends State<SignUpStep2> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
+                    DatabaseService.AddDrProfessional_Info(
+                      uid: user!.uid,
+                      name: _nameController.text,
+                      title: _selectedTitle ?? '',
+                      experience: _experienceController.text,
+                      Primary_specialization: _selectedPrimarySpecialization ??'',
+                      Secondary_specialization: _selectedSecondarySpecialization ?? '',
+                      Service_Offered: _selectedService ?? '',
+                      Condition: _selectedCondition ?? '',
+                    );
                     if (_formKey.currentState!.validate()) {
                       Navigator.push(
                         context,

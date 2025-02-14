@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ExperiencePage extends StatefulWidget {
@@ -13,12 +15,37 @@ class _ExperiencePageState extends State<ExperiencePage> {
   final TextEditingController _organizationController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
 
-  void _saveExperience() {
+  void _saveExperience() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Experience Saved: ${_positionController.text} at ${_organizationController.text} (${_startYearController.text} - ${_endYearController.text}) in ${_cityController.text}")),
-      );
-      Navigator.pop(context);
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("User not logged in!")),
+        );
+        return;
+      }
+      try {
+        // Save experience data to Firestore
+        await FirebaseFirestore.instance
+            .collection('Doctors')
+            .doc(user.uid)
+            .collection('experiences')
+            .add({
+          'startYear': _startYearController.text,
+          'endYear': _endYearController.text,
+          'position': _positionController.text,
+          'organization': _organizationController.text,
+          'city': _cityController.text,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Experience saved successfully!")),
+        );
+        Navigator.pop(context); // Return to the previous screen
+      } catch (e) {
+        print(e);
+      }
     }
   }
 

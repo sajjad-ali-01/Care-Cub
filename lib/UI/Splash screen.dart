@@ -4,6 +4,7 @@ import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'BottomNavigationBar.dart';
 
+import 'Dr_Account/Register/Clinic.dart';
 import 'WelcomeScreen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
         nextScreen =  Tabs(); // If user is logged in, navigate to Home
       }
       if(isVerify){
-        nextScreen= SignUpStep2();
+        nextScreen= AddClinicScreen();
       }
       else {
         nextScreen =  WelcomeScreen(); // Otherwise, navigate to Login
