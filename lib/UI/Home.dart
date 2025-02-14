@@ -1,199 +1,254 @@
 import 'package:flutter/material.dart';
-import 'User/ChildDetailsScreen.dart';
+import 'PatientHistory.dart'; // Importing Patient History Page
+import 'DoctorProfile.dart'; // Importing Doctor Profile Page
 
-class Home extends StatefulWidget {
-  const Home({super.key});
-
-  @override
-  State<Home> createState() => _HomeState();
+void main() {
+  runApp(MyApp());
 }
-class _HomeState extends State<Home> {
+
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-      child: Container(
-        decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [ Colors.white38,Colors.white38,],//[ Color(0xFFFFADD2),Color(0xFFFFE3EC),],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        ),
-        borderRadius: const BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        bottomRight: Radius.circular(20),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Doctor Dashboard',
+      theme: ThemeData(
+        primarySwatch: Colors.deepOrange,
       ),
-    ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      home: DoctorDashboard(),
+    );
+  }
+}
+
+class DoctorDashboard extends StatefulWidget {
+  @override
+  _DoctorDashboardState createState() => _DoctorDashboardState();
+}
+
+class _DoctorDashboardState extends State<DoctorDashboard> {
+  List<Map<String, dynamic>> appointments = [
+    {
+      'name': 'John Doe',
+      'gender': 'Male',
+      'age': 30,
+      'contact': '123-456-7890',
+      'time': '10:00 AM',
+      'description': 'Follow-up for blood pressure check.'
+    },
+    {
+      'name': 'Jane Smith',
+      'gender': 'Female',
+      'age': 25,
+      'contact': '987-654-3210',
+      'time': '11:30 AM',
+      'description': 'General consultation and flu symptoms.'
+    },
+  ];
+
+  List<Map<String, dynamic>> history = [];
+
+  void acceptAppointment(int index) {
+    setState(() {
+      history.add(appointments[index]);
+      appointments.removeAt(index);
+    });
+  }
+
+  void declineAppointment(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Confirm Decline"),
+          content: Text("Are you sure you want to decline this appointment?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  appointments.removeAt(index);
+                });
+                Navigator.pop(context);
+              },
+              child: Text("Decline", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Doctor Dashboard'),
+          bottom: TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.home), text: 'Appointments'),
+              Tab(icon: Icon(Icons.history), text: 'Patient History'),
+              Tab(icon: Icon(Icons.group), text: 'Community'),
+              Tab(icon: Icon(Icons.person), text: 'Profile'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           children: [
-            SizedBox(height: 30,),
-            GestureDetector(
-              onTap: (){},
-              child: Container(
-                width: MediaQuery.of(context).size.width, // Set the desired width
-                height: 120.0,
-                //padding: const EdgeInsets.symmetric(vertical: 40,horizontal: 15),
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      //colors: [Color(0xFFFFE3EC), Color(0xFFFFADED)],
-                      colors: [Color(0xFFFFE3D3), Color(0xFFFFAD9E)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(10),
-                      bottomRight: Radius.circular(10),
-                    )
+            HomePage(appointments, acceptAppointment, declineAppointment),
+            PatientHistoryPage(history),
+            CommunityPage(),
+            DoctorProfilePage(), // ✅ Connected Full Doctor Profile Page
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 🏠 **Home Page**
+class HomePage extends StatelessWidget {
+  final List<Map<String, dynamic>> appointments;
+  final Function(int) acceptAppointment;
+  final Function(int) declineAppointment;
+
+  HomePage(this.appointments, this.acceptAppointment, this.declineAppointment);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(16.0),
+      child: ListView.builder(
+        itemCount: appointments.length,
+        itemBuilder: (context, index) {
+          final appointment = appointments[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AppointmentDetailPage(
+                    appointment: appointment,
+                    onAccept: () => acceptAppointment(index),
+                    onDecline: () => declineAppointment(index),
+                  ),
                 ),
+              );
+            },
+            child: Card(
+              margin: EdgeInsets.symmetric(vertical: 8.0),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+              elevation: 4,
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    SizedBox(width: 20,),
-                    Image.asset(
-                      'assets/images/cute_baby.png', // Replace with your image path
-                      width: 120, // Adjust the width as needed
-                      height: 120, // Adjust the height as needed
-                      // Adjust how the image fits in the container
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: AssetImage('assets/images/profile_pic.png'),
                     ),
-                    SizedBox(width: 10,),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Ali Hamza',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            appointment['name'],
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        const Text(
-                          '5 weeks',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: Icon(Icons.account_circle, color: Colors.black54),
-                          label: Text(
-                            "Profile",
-                            style: const TextStyle(color: Colors.black87),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.pink.shade100, // Add backgroundColor here.
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          ),
-                        )
-                      ],
+                          Text("Time: ${appointment['time']}"),
+                          Text("Description: ${appointment['description']}"),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: (){
-                Navigator.push(context, MaterialPageRoute(builder: (context)=>ChildDetailsScreen()));
-              },
-              child: Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Baby Tracker',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
-                            'Last diaper changed',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                          Text(
-                            '1 month',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          //primary: Colors.purple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Optimize your baby\'s sleep'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20,),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: GridView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                children: [
-                  _buildCard("Feed", Icons.local_drink, Color(0xFFE6DFFF)),
-                  _buildCard("Express", Icons.water_drop, Color(0xFFFFE6E6)),
-                  _buildCard("Nappy", Icons.baby_changing_station,
-                      Color(0xFFDFFAFF)),
-                  _buildCard("Sleep", Icons.bedtime, Color(0xFFFFE6DD)),
-                  _buildCard("Growth", Icons.show_chart, Color(0xFFFFFFD6)),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 20,),
-          ],
-        ),
-    )
-    )
+          );
+        },
+      ),
     );
   }
 }
 
-// Method to Build Each Card
-Widget _buildCard(String title, IconData icon, Color color) {
-  return Container(
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 40, color: Colors.deepOrange),
-          SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-          ),
-        ],
+// 📄 **Appointment Details Page**
+class AppointmentDetailPage extends StatelessWidget {
+  final Map<String, dynamic> appointment;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  AppointmentDetailPage({required this.appointment, required this.onAccept, required this.onDecline});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Appointment Details")),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: AssetImage('assets/images/profile_pic.png'),
+            ),
+            SizedBox(height: 16),
+            Text(appointment['name'], style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text("Gender: ${appointment['gender']}"),
+            Text("Age: ${appointment['age']}"),
+            Text("Contact: ${appointment['contact']}"),
+            Text("Time: ${appointment['time']}"),
+            SizedBox(height: 10),
+            Text("Description:", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(appointment['description']),
+            Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    onAccept();
+                    Navigator.pop(context);
+                  },
+                  child: Text("Accept"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () {
+                    onDecline();
+                  },
+                  child: Text("Decline"),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+// 👥 **Community Page**
+class CommunityPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ElevatedButton(
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Joined Community!")),
+          );
+        },
+        child: Text("Join Community"),
+      ),
+    );
+  }
 }
