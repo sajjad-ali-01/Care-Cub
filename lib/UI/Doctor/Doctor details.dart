@@ -19,6 +19,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
             SliverAppBar(
               expandedHeight: 150,
               pinned: true,
+              automaticallyImplyLeading: true,
               backgroundColor: Colors.deepOrange.shade400,
               leading: IconButton(
                 onPressed: () {
@@ -38,27 +39,34 @@ class _DoctorProfileState extends State<DoctorProfile> {
                           AssetImage('assets/images/doctor.jpg'),
                         ),
                         SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.doctor['name'],
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color:Colors.white
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.doctor['name'],
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Text(
-                              widget.doctor['specialization'],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade100
+                              Text(
+                                widget.doctor['specialization'],
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade100,
+                                ),
+                                maxLines: 3, // Allow up to 2 lines
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        )
                       ],
                     ),
                   );

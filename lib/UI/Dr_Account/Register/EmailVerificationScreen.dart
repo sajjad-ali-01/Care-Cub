@@ -1,27 +1,30 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:carecub/UI/User/Login.dart';
 
-import '../../Database/DatabaseServices.dart';
-import '../../Logic/Users/User_Deletion.dart';
-import '../BottomNavigationBar.dart';
-
+import '../../../Database/DatabaseServices.dart';
+import '../../../Logic/Users/User_Deletion.dart';
+import 'Professional_Info.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String name;
   final String email;
   final String phone;
+  final String title;
+  final String city;
   late User? user;
   final String password;
-
 
   EmailVerificationScreen({
     Key? key,
     required this.name,
     required this.email,
     required this.phone,
+    required this.title,
+    required this.city,
     required this.user,
     required this.password,
   }) : super(key: key);
@@ -32,7 +35,7 @@ class EmailVerificationScreen extends StatefulWidget {
 }
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
-  //User? user = FirebaseAuth.instance.currentUser;
+  User? user = FirebaseAuth.instance.currentUser;
   late StreamSubscription<User?> userSubscription;
   Timer? timer;
   bool isVerified = false;
@@ -47,17 +50,19 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           if (currentUser != null) {
             await currentUser.reload(); // Reload the user state
             setState(() {
-              widget.user = currentUser;
+              user = currentUser;
             });
 
             if (currentUser.emailVerified) {
               isVerified = true;
               await _setUserLoggedIn(); // Save login state locally
-              await DatabaseService.saveUserData(
+              await DatabaseService.saveDrData(
                 uid: widget.user!.uid,
                 name: widget.name,
                 email: widget.email,
                 phone: widget.phone,
+                title: widget.title,
+                city: widget.city,
               ); // Store user data in Firestore
               navigateToNextScreen();
             }
@@ -65,14 +70,13 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         });
 
     // Stop checking after 3 minutes
-    timer = Timer(Duration(minutes: 3), () {
+    timer = Timer(Duration(minutes: 1), () {
       if (!isVerified) {
         User_Deletion.reauthenticateAndDelete(widget.password);
         navigateToLoginScreen();
       }
     });
   }
-
   @override
   void dispose() {
     userSubscription.cancel(); // Cancel the subscription to avoid memory leaks
@@ -83,27 +87,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   // Save login state in SharedPreferences
   Future<void> _setUserLoggedIn() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
+    await prefs.setBool('isVerify', true);
   }
-
-  // Store user data in Firestore
-  // Future<void> _storeUserData() async {
-  //   if (user != null) {
-  //     await FirebaseFirestore.instance.collection('users').doc(user?.uid).set({
-  //       'name': widget.name,
-  //       'email': widget.email,
-  //       'phone': widget.phone,
-  //       'isVerified': true,
-  //       'createdAt': FieldValue.serverTimestamp(),
-  //     });
-  //   }
-  // }
 
   void navigateToNextScreen() {
     if (!isVerified) return; // Ensure navigation happens only once
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => Tabs()),
+      MaterialPageRoute(builder: (context) => SignUpStep2()),
     );
   }
   void navigateToLoginScreen() {
@@ -133,7 +124,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               ),
               Text(
-                'A verification email has been sent to "${widget.user?.email}". Please verify.',
+                'A verification email has been sent to "${user?.email}". Please verify.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.black,
@@ -143,8 +134,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               SizedBox(height: 20),
               ElevatedButton(
                   onPressed: () async {
-                    if (widget.user != null) {
-                      await widget.user?.sendEmailVerification();
+                    if (user != null) {
+                      await user?.sendEmailVerification();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Verification email resent!')),
                       );
@@ -193,8 +184,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async{
+
                     User_Deletion.reauthenticateAndDelete(widget.password);
+
                     Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
                   },
                   style: ElevatedButton.styleFrom(

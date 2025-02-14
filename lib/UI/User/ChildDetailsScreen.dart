@@ -1,6 +1,6 @@
 import 'package:carecub/UI/User/Register.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/FirebaseAuth.dart';
+import '../../Logic/Users/ParentsLogic.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Home.dart';
@@ -217,7 +217,7 @@ class _ChildDetailsScreenState extends State<ChildDetailsScreen> {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              SignInWithGoogle(context);
+                              //SignInWithGoogle(context);
                             },
                             child: CircleAvatar(
                               radius: 20,

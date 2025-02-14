@@ -1,15 +1,20 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../Database/DatabaseServices.dart';
+import '../../../Logic/Users/ParentsLogic.dart';
 import 'Professional_Info.dart';
+import 'EmailVerificationScreen.dart';
 
-class SignIn extends StatefulWidget {
-  const SignIn({super.key});
+
+class SignUp extends StatefulWidget {
+  const SignUp({super.key});
 
   @override
-  State<SignIn> createState() => _SignInState();
+  State<SignUp> createState() => _SignUpState();
 }
 
-class _SignInState extends State<SignIn> {
+class _SignUpState extends State<SignUp> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -18,28 +23,51 @@ class _SignInState extends State<SignIn> {
   final _nameController = TextEditingController();
   final _countryController = TextEditingController(text: "Pakistan");
 
+
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
   String? _selectedTitle;
   String? _selectedCity;
+  bool _isLoading = false;
   final List<String> _cities = [
-    'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad',
-    'Multan', 'Peshawar', 'Quetta', 'Hyderabad', 'Sialkot'
+    'Karachi', 'Lahore', 'Islamabad'
   ];
 
-  void _goToNextPage() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SignInStep2(
-            title: _selectedTitle ?? '',
-            name: _nameController.text,
+  Future<void> _registerUser({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    setState(() => _isLoading = true);
 
+    try {
+      final User? user = await BackendService.registerUser(email, password);
+      if (user != null) {
+        await BackendService.sendVerificationEmail(user);
+        showToast(message: "Verification email sent to $email. Please verify your email.");
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(
+              name: _nameController.text.trim(),
+              email: email,
+              phone: _phoneController.text.trim(),
+              title: _selectedTitle ??'',
+              city: _selectedCity ?? "",
+              user: user,
+              password: password,
+            ),
           ),
-        ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -257,9 +285,11 @@ class _SignInState extends State<SignIn> {
                 ),
                 SizedBox(height: 20),
 
-                // Next Button
+                //Next Button
                 ElevatedButton(
-                  onPressed: _goToNextPage,
+                  onPressed: (){
+                    _registerUser(email: _emailController.text, password: _passwordController.text, context: context);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
                     padding: EdgeInsets.symmetric(vertical: 10, horizontal: 100),

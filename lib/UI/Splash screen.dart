@@ -1,8 +1,9 @@
+import 'package:carecub/UI/Dr_Account/Register/Professional_Info.dart';
 import 'package:flutter/material.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-//import 'User/Login.dart';
 import 'BottomNavigationBar.dart';
+
 import 'WelcomeScreen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
    // bool isFirstTime = prefs.getBool('isFirstTime') ?? true;
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
+    bool isVerify = prefs.getBool('isVerify')?? false;
     // Update the nextScreen based on user status
     setState(() {
       // if (isFirstTime) {
@@ -34,7 +35,11 @@ class _SplashScreenState extends State<SplashScreen> {
       // } else
       if (isLoggedIn) {
         nextScreen =  Tabs(); // If user is logged in, navigate to Home
-      } else {
+      }
+      if(isVerify){
+        nextScreen= SignUpStep2();
+      }
+      else {
         nextScreen =  WelcomeScreen(); // Otherwise, navigate to Login
       }
     });

@@ -1,29 +1,48 @@
+import 'package:carecub/Database/DatabaseServices.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'Education.dart'; // Import the new screen
 
-class SignInStep2 extends StatefulWidget {
-  final String title;
-  final String name;
+import 'Education.dart';
 
-  const SignInStep2({
-    super.key,
-    required this.title,
-    required this.name,
-  });
+class SignUpStep2 extends StatefulWidget {
+
+  const SignUpStep2({
+
+    super.key,});
 
   @override
-  State<SignInStep2> createState() => _SignInStep2State();
+  State<SignUpStep2> createState() => _SignUpStep2State();
 }
 
-class _SignInStep2State extends State<SignInStep2> {
+class _SignUpStep2State extends State<SignUpStep2> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _experienceController;
+  String? name;
+  String? title;
   String? _selectedTitle;
   String? _selectedPrimarySpecialization;
   String? _selectedSecondarySpecialization;
   String? _selectedService;
   String? _selectedCondition;
+  User? user;
+  void fetchDoctorData() async {
+    try {
+      if (user == null) return; // Ensure user is not null
+      Map<String, dynamic>? doctorData = await DatabaseService.getDrData(user!.uid);
+      if (doctorData != null && mounted) {
+        setState(() {
+          title = doctorData['title'];
+          name = doctorData['name'];
+          _selectedTitle = title;
+          _nameController.text = name ?? ""; // Update controller text
+        });
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
+  }
+
 
   final List<String> _specializations = [
     'Pediatrics', 'Cardiology', 'Dermatology', 'Neurology', 'Orthopedics',
@@ -41,9 +60,10 @@ class _SignInStep2State extends State<SignInStep2> {
   @override
   void initState() {
     super.initState();
-    _selectedTitle = widget.title;
-    _nameController = TextEditingController(text: widget.name);
+    user = FirebaseAuth.instance.currentUser;
+    _nameController = TextEditingController(text: ""); // Start with empty text
     _experienceController = TextEditingController();
+    fetchDoctorData(); // Fetch data after initialization
   }
 
   @override

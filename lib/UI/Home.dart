@@ -1,10 +1,10 @@
 import 'package:carecub/UI/DayCare/DayCareListing.dart';
-import 'package:carecub/UI/Community/chat_page.dart';
 import 'package:flutter/material.dart';
+import 'Community/Community.dart';
 import 'CryTranslation/cryUI.dart';
 import 'Doctor/Doctorlist.dart';
+import 'Dr_Account/Register/SignUp.dart';
 import 'Nutrition Guide/NutritionGuidanceScreen.dart';
-import 'TrakingsScreens/TrackersList.dart';
 import 'User/ProfileScreen.dart';
 
 class Home extends StatefulWidget {
@@ -192,7 +192,7 @@ class _HomeState extends State<Home> {
                     'Nutrition Guid',
                     Icons.apple,
                     Colors.red.shade100,
-                    Colors.pink, // Shadow color
+                    Colors.pink,
                         () {
                       Navigator.push(context, MaterialPageRoute(builder: (context)=>NutritionGuidanceScreen()));
                     },
@@ -217,7 +217,7 @@ class _HomeState extends State<Home> {
                         () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ChatPage()),
+                            MaterialPageRoute(builder: (context) => Community()),
                           );
                     },
                   ),
@@ -251,7 +251,7 @@ class _HomeState extends State<Home> {
                     Color(0xAFFDFFD6),
                     Colors.yellow, // Shadow color
                         () {
-                      print("Growth card tapped");
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=>SignUp()));
                     },
                   ),
                 ],
@@ -269,7 +269,7 @@ class _HomeState extends State<Home> {
 
 // Method to Build Each Card
 Widget buildCard(String title, IconData icon, Color cardColor, Color shadowColor, VoidCallback onTap) {
-  return GestureDetector(
+  return InkWell(
     onTap: onTap,
     child: Container(
       decoration: BoxDecoration(

@@ -1,7 +1,6 @@
+import 'package:carecub/UI/Community/Community.dart';
 import 'package:carecub/UI/Home.dart';
-import 'package:carecub/UI/Community/chat_page.dart';
 import 'package:flutter/material.dart';
-
 import 'CryTranslation/cryUI.dart';
 import 'TrakingsScreens/TrackersList.dart';
 
@@ -20,7 +19,7 @@ class _TabsState extends State<Tabs> {
     Home(),
     CryCaptureScreen(),
     Icon(Icons.notifications, size: 100),
-    ChatPage(),
+    Community(),
     TrackersList(),
   ];
 

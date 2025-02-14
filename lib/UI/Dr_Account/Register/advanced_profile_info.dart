@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'award_page.dart';
 import 'experience_page.dart';
-import 'Clinic.dart'; // Navigate to Add Clinic after completion
+import '../../Clinic.dart'; // Navigate to Add Clinic after completion
 
 class AdvancedProfileInfoPage extends StatefulWidget {
   @override

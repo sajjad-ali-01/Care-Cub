@@ -1,6 +1,8 @@
 import 'package:carecub/UI/User/Login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../Database/DatabaseServices.dart';
+import '../../Logic/Users/ParentsLogic.dart';
 import 'EmailVerificationScreen.dart';
 
 
@@ -21,60 +23,46 @@ class _RegisterState extends State<Register> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false; // Add this to track loading state
-
   Future<void> _registerUser({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
-    setState(() {
-      _isLoading = true; // Set loading to true when registration starts
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Create the user with the provided email and password
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final User? user = await BackendService.registerUser(email, password);
+      if (user != null) {
+        await BackendService.sendVerificationEmail(user);
+        // await DatabaseService.saveUserData(
+        //   uid: user.uid,
+        //   name: _nameController.text.trim(),
+        //   email: email,
+        //   phone: _phoneController.text.trim(),
+        // );
+        showToast(message: "Verification email sent to $email. Please verify your email.");
 
-      // Send a verification email
-      User? user = userCredential.user;
-      await user?.sendEmailVerification();
-
-      // Notify the user to check their email
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'A verification email has been sent to $email. Please verify your email.',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(
+              name: _nameController.text.trim(),
+              email: email,
+              phone: _phoneController.text.trim(),
+              user: user,
+              password: password,
+            ),
           ),
-        ),
-      );
-
-      // Pass user data to EmailVerificationScreen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => EmailVerificationScreen(
-            name: _nameController.text.trim(),
-            email: email,
-            phone: _phoneController.text.trim(),
-          ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      // Handle errors
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     } finally {
-      setState(() {
-        _isLoading = false; // Set loading to false when the process finishes
-      });
+      setState(() => _isLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -281,7 +269,7 @@ class _RegisterState extends State<Register> {
                     children: [
                       GestureDetector(
                         onTap: () {
-                          // SignInWithGoogle(context);
+                          SignInWithGoogle(context);
                         },
                         child: CircleAvatar(
                           radius: 20,

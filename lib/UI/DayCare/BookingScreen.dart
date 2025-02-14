@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 
-class BookingScreen extends StatefulWidget {
-  final String daycareName;
-  final String daycareImage;
+class DaycareBookingScreen extends StatefulWidget {
+  final String name;
+  final String image;
+  final String type;
+  final String location;
+  final String price;
 
-  BookingScreen({required this.daycareName, required this.daycareImage});
+  DaycareBookingScreen({
+    required this.name,
+    required this.image,
+    required this.type,
+    required this.location,
+    required this.price,
+  });
 
   @override
-  _BookingScreenState createState() => _BookingScreenState();
+  _DaycareBookingScreenState createState() => _DaycareBookingScreenState();
 }
 
-class _BookingScreenState extends State<BookingScreen> {
+class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
   DateTime? selectedDate;
   String? selectedTime;
   final TextEditingController childNameController = TextEditingController();
@@ -19,21 +28,22 @@ class _BookingScreenState extends State<BookingScreen> {
   String? selectedGender;
 
   final List<String> availableTimeSlots = [
+    '8:00 AM',
     '9:00 AM',
     '10:00 AM',
-    '11:00 AM',
     '1:00 PM',
-    '2:00 PM',
     '3:00 PM',
+    '5:00 PM',
   ];
 
-  void _showDatePicker() async {
+  void _selectDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(Duration(days: 365)),
     );
+
     if (pickedDate != null) {
       setState(() {
         selectedDate = pickedDate;
@@ -45,48 +55,115 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFEBFF),
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade500,
-        title: Text('Booking - ${widget.daycareName}',style: TextStyle(color: Color(0xFFFFEBFF)),),
+        backgroundColor: Colors.deepOrange.shade400,
+        title: Text('Daycare Booking', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Daycare Image and Name
-            Center(
-              child: Column(
-                children: [
-                  const SizedBox(height: 0),
-                  Text(
-                    widget.daycareName,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,color: Colors.deepOrange.shade800),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      widget.daycareImage,
-                      height: 140,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+            // Daycare Information Card
+            Card(
+              color: Colors.white,
+              elevation: 5,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            widget.image,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.name,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                widget.type,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.price_check,
+                                      color: Colors.green.shade700,
+                                      size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    widget.price,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on,
+                            color: Colors.deepOrange.shade400,
+                            size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.location,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 10),
-            // Child Name Field
+            SizedBox(height: 20),
+
+            // Booking Form
             TextField(
               controller: childNameController,
               decoration: InputDecoration(
-                labelText: 'Child\'s Name',
+                labelText: "Child's Full Name",
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.child_care),
               ),
             ),
-            const SizedBox(height: 10),
-            // Gender Dropdown
+            SizedBox(height: 15),
+
             DropdownButtonFormField<String>(
               value: selectedGender,
               items: ['Male', 'Female', 'Other']
@@ -95,54 +172,57 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Text(gender),
               ))
                   .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedGender = value;
-                });
-              },
+              onChanged: (value) => setState(() => selectedGender = value),
               decoration: InputDecoration(
-                labelText: 'Gender',
+                labelText: "Child's Gender",
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.transgender),
               ),
             ),
-            const SizedBox(height: 10),
-            // Contact Number Field
+            SizedBox(height: 15),
+
             TextField(
               controller: contactController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                labelText: 'Contact Number',
+                labelText: "Parent's Contact Number",
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone),
               ),
             ),
-            const SizedBox(height: 10),
-            // Calendar Field
+            SizedBox(height: 15),
+
             GestureDetector(
-              onTap: _showDatePicker,
+              onTap: _selectDate,
               child: AbsorbPointer(
                 child: TextField(
                   controller: dateController,
                   decoration: InputDecoration(
-                    labelText: 'Select Date',
+                    labelText: "Start Date",
                     border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
+                    prefixIcon: Icon(Icons.calendar_today),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 20),
 
-            // Time Slots
             Text(
-              'Select Time Slot:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              "Preferred Drop-off Time:",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            SizedBox(height: 10),
             Wrap(
               spacing: 10,
+              runSpacing: 10,
               children: availableTimeSlots.map((time) {
                 return ChoiceChip(
                   label: Text(time),
                   selected: selectedTime == time,
+                  selectedColor: Colors.deepOrange.shade100,
                   onSelected: (selected) {
                     setState(() {
                       selectedTime = selected ? time : null;
@@ -151,46 +231,90 @@ class _BookingScreenState extends State<BookingScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: 30),
 
-            // Submit Button
-            Center(
+            // Booking Button
+            SizedBox(
+              width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (childNameController.text.isEmpty ||
-                      contactController.text.isEmpty ||
-                      selectedGender == null ||
-                      dateController.text.isEmpty ||
-                      selectedTime == null) {
-                    // Show error if any field is missing
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please fill all the fields')),
-                    );
-                  } else {
-                    // Handle booking submission
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Booking Confirmed for ${childNameController.text}!'),
-                      ),
-                    );
+                  if (_validateForm()) {
+                    _showConfirmationDialog();
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade300,
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 70),
+                  backgroundColor: Colors.deepOrange.shade400,
+                  padding: EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: Text(
-                  'Confirm Booking',
-                  style: TextStyle(fontSize: 18,color: Color(0xFFFFEBFF)),
+                  "Confirm Booking",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  bool _validateForm() {
+    if (childNameController.text.isEmpty ||
+        contactController.text.isEmpty ||
+        selectedGender == null ||
+        dateController.text.isEmpty ||
+        selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Please fill all required fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  void _showConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Booking Confirmation"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Daycare: ${widget.name}"),
+            Text("Child: ${childNameController.text}"),
+            Text("Start Date: ${dateController.text}"),
+            Text("Drop-off Time: $selectedTime"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Edit"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Booking confirmed successfully!"),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: Text("Confirm"),
+          ),
+        ],
       ),
     );
   }
