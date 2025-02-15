@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../Database/DatabaseServices.dart';
 import '../Doctor/BookingScreen.dart';
 import 'Doctor details.dart';
 import 'MyBookings.dart';
@@ -12,6 +14,9 @@ class Doctorlist extends StatefulWidget {
 class _DoctorListState extends State<Doctorlist> {
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +88,7 @@ class _DoctorListState extends State<Doctorlist> {
         ],
       ),
 
-        body: Padding(
+      body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
           children: [
@@ -112,49 +117,37 @@ class _DoctorListState extends State<Doctorlist> {
             ),
             SizedBox(height: 10),
             Expanded(
-              child: ListView(
-                children: [
-                  DoctorCard(
-                    name: "Dr. Ayesha Khan",
-                    specialization: "Pediatrician, Neonatologist",
-                    qualification: "M.B.B.S, FCPS (Pediatrics)",
-                    experience: "10 Years",
-                    rating: "98% (350 Satisfied)",
-                    fee: "Rs. 1,800",
-                    locations: [
-                      "Sunshine Children's Hospital - Rs. 1,800",
-                      "Shrif Medical Complex - Rs. 1,700",
-                    ],
-                    image: "assets/images/doctor.jpg",
-                  ),
-                  SizedBox(height: 15),
-                  DoctorCard(
-                    name: "Dr. Usman Sheikh",
-                    specialization: "Child Specialist, Pediatrician",
-                    qualification: "M.B.B.S, MCPS (Pediatrics)",
-                    experience: "12 Years",
-                    rating: "95% (420 Satisfied)",
-                    fee: "Rs. 2,000",
-                    locations: [
-                      "Happy Kids Clinic - Rs. 2,000",
-                    ],
-                    image: "assets/images/doctor.jpg",
-                  ),
-                  SizedBox(height: 15),
-                  DoctorCard(
-                    name: "Dr. Hina Batool",
-                    specialization: "Pediatrician, Child Nutrition Expert",
-                    qualification: "M.B.B.S, FCPS (Pediatrics)",
-                    experience: "8 Years",
-                    rating: "97% (310 Satisfied)",
-                    fee: "Rs. 1,500",
-                    locations: [
-                      "Kids Care Medical Center - Rs. 1,500",
-                      "Adil Pediatric Clinic - Rs. 1,600",
-                    ],
-                    image: "assets/images/doctor.jpg",
-                  ),
-                ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('Doctors').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(child: Text('No doctors found.'));
+                  } else {
+                    return ListView(
+                      children: snapshot.data!.docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DoctorCard(
+                          name: data['name'] ?? 'No Name',
+                          title: data['title'] ?? 'No Title',
+                          specialization: data['Primary_specialization'] ?? 'No Specialization',
+                          secondary_specialization: data['Secondary_specialization'] ?? 'No Secondary Specialization',
+                          qualification: data['Degree'] ?? 'No Qualification',
+                          experience: data['experience'] ?? 'No Experience',
+                          rating: '98% (350 Satisfied)', // Placeholder, replace with actual data if available
+                          fee: 'Rs. 1,800', // Placeholder, replace with actual data if available
+                          image: data['photoUrl'] ?? 'assets/images/doctor.jpg',
+                          uid: doc.id,
+                          services: List<String>.from(data['Service_Offered'] ?? []), // Fetch services
+                          conditions: List<String>.from(data['Condition'] ?? []), // Fetch conditions
+                        );
+                      }).toList(),
+                    );
+                  }
+                },
               ),
             ),
           ],
@@ -164,15 +157,20 @@ class _DoctorListState extends State<Doctorlist> {
   }
 }
 
-class DoctorCard extends StatelessWidget {
+class DoctorCard extends StatefulWidget {
   final String name;
+  final String title;
   final String specialization;
+  final String secondary_specialization;
   final String qualification;
   final String experience;
   final String rating;
   final String fee;
   final String image;
-  final List<String> locations;
+  final String uid;
+  final List<String> services; // Add services
+  final List<String> conditions; // Add conditions
+
 
   DoctorCard({
     required this.name,
@@ -182,8 +180,46 @@ class DoctorCard extends StatelessWidget {
     required this.rating,
     required this.fee,
     required this.image,
-    required this.locations,
+    required this.title,
+    required this.secondary_specialization,
+    required this.uid,
+    required this.services, // Add services
+    required this.conditions,
   });
+
+  @override
+  _DoctorCardState createState() => _DoctorCardState();
+}
+
+class _DoctorCardState extends State<DoctorCard> {
+  List<Map<String, dynamic>> clinics = []; // List to store clinics
+  bool isLoading = true; // Track loading state
+  String dataRowToString(DataRow row) {
+    return row.cells.map((cell) => (cell.child as Text).data).join(", ");
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchClinics(); // Fetch clinics when the widget initializes
+  }
+
+  // Fetch clinics from Firestore
+  Future<void> fetchClinics() async {
+    try {
+      List<Map<String, dynamic>> fetchedClinics =
+      await DatabaseService.getDoctorClinics(widget.uid);
+      setState(() {
+        clinics = fetchedClinics;
+        isLoading = false; // Update loading state
+      });
+    } catch (e) {
+      print("Error fetching clinics: $e");
+      setState(() {
+        isLoading = false; // Update loading state even if there's an error
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,14 +230,19 @@ class DoctorCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => DoctorProfile(
               doctor: {
-                'name': name,
-                'specialization': specialization,
-                'qualification': qualification,
-                'experience': experience,
-                'rating': rating,
-                'fee': fee,
-                'locations': locations,
-                'image': image,
+                'name': widget.name,
+                'title':widget.title,
+                'specialization': widget.specialization,
+                'secondary_specialization':widget.secondary_specialization,
+                'qualification': widget.qualification,
+                'experience': widget.experience,
+                'rating': widget.rating,
+                'fee': widget.fee,
+                'image': widget.image,
+                'uid': widget.uid,
+                'services': widget.services, // Pass services
+                'conditions': widget.conditions,
+                'Address':clinics[0]['Address'],
               },
             ),
           ),
@@ -219,7 +260,7 @@ class DoctorCard extends StatelessWidget {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: AssetImage(image),
+                    backgroundImage: AssetImage(widget.image),
                     radius: 30,
                   ),
                   SizedBox(width: 10),
@@ -227,9 +268,9 @@ class DoctorCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                        Text(specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                        Text(qualification, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                        Text(widget.title + " " +widget.name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                        Text(widget.specialization+"," +widget.secondary_specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                        Text(widget.qualification, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                       ],
                     ),
                   ),
@@ -239,35 +280,44 @@ class DoctorCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Experience: $experience", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                  Text(rating, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text("Experience: ${widget.experience} years", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(widget.rating, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 ],
               ),
               SizedBox(height: 10),
               Container(
                 height: 100,
-                child: ListView(
+                child: isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : clinics.isEmpty
+                    ? Center(child: Text('No clinics found.'))
+                    : ListView(
                   scrollDirection: Axis.horizontal,
-                  children: locations.map((location) {
-                    // Split the location string into hospital name and price
-                    final parts = location.split(' - ');
-                    final hospitalName = parts[0].trim();
-                    final hospitalPrice = parts.length > 1 ? parts[1].trim() : fee;
+                  children: clinics.map((clinic) {
+                    final availability = clinic['Availability'] as Map<String, dynamic>? ?? {};
+                    final now = DateTime.now();
 
+                    // Get today and tomorrow's availability
+                    final todayDay = _getDayName(now.weekday);
+
+                    // Create default rows for today and tomorrow
+                    final DataRow todayRow = _buildAvailabilityRow('Today', todayDay, availability);
+                    // Convert todayRow to String
+                    String todayRowString = dataRowToString(todayRow);
+                    print(todayRowString);
                     return Container(
                       width: 250,
                       margin: EdgeInsets.symmetric(horizontal: 5),
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade600,width: 1),
-                    gradient: LinearGradient(
-                    colors: [Colors.blue.shade50, Colors.grey.shade50],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-
-                      )
+                        border: Border.all(color: Colors.grey.shade600, width: 1),
+                        gradient: LinearGradient(
+                          colors: [Colors.blue.shade50, Colors.grey.shade50],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,7 +327,7 @@ class DoctorCard extends StatelessWidget {
                               Icon(Icons.local_hospital_sharp, color: Colors.deepOrange, size: 20),
                               SizedBox(width: 8),
                               Text(
-                                hospitalName, // Use the parsed hospital name
+                                clinic['ClinicName'], // Use the parsed hospital name
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 14,
@@ -285,13 +335,13 @@ class DoctorCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
+                          SizedBox(height: 2),
                           Row(
                             children: [
-                              Icon(Icons.access_time, color: Colors.grey, size: 18),
+                              Icon(Icons.location_on, color: Colors.blue, size: 15),
                               SizedBox(width: 8),
                               Text(
-                                'Available tomorrow',
+                                clinic['Address'], // Use the parsed hospital nam
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 13,
@@ -299,12 +349,25 @@ class DoctorCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          Spacer(),
+                          Row(
+                            children: [
+                              Icon(Icons.access_time, color: Colors.green, size: 15),
+                              SizedBox(width: 8),
+                              Text(
+                                todayRowString,
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                hospitalPrice, // Use the parsed hospital price
+                                'Fee: Rs. ${clinic['Fees']}', // Use the parsed hospital price
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -333,44 +396,46 @@ class DoctorCard extends StatelessWidget {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      if (locations.length > 1) {
+                      if (clinics.length > 1) {
                         _showHospitalSelection(context);
                       } else {
                         // Directly navigate if only one hospital
-                        final parts = locations[0].split(' - ');
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => BookingScreen(
-                              name: name,
-                              Image: image,
-                              Specialization: specialization,
-                              locations: 'Ahsan mumtaz Hospital',
-
+                              name: widget.name,
+                              Image: widget.image,
+                              Specialization: widget.specialization,
+                              locations: clinics[0]['ClinicName'],
+                              Address: clinics[0]['Address'],
+                              Secondary_Specialization: widget.secondary_specialization,
+                              qualification: widget.qualification,
                             ),
                           ),
                         );
                       }
                     },
-                    icon: Icon(Icons.calendar_today_sharp, size: 18,color: Colors.teal.shade100,),
-                    label: Text("Book Appointment",style: TextStyle(fontSize: 17,color: Colors.white),),
+                    icon: Icon(Icons.calendar_today_sharp, size: 18, color: Colors.teal.shade100),
+                    label: Text("Book Appointment", style: TextStyle(fontSize: 17, color: Colors.white)),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange.shade400,
-                        minimumSize: Size(280, 40),
+                      backgroundColor: Colors.deepOrange.shade400,
+                      minimumSize: Size(280, 40),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 2,
                     ),
-                    ),
+                  ),
                 ],
               ),
             ],
           ),
         ),
-      )
+      ),
     );
   }
+
   void _showHospitalSelection(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -406,13 +471,10 @@ class DoctorCard extends StatelessWidget {
             SizedBox(height: 15),
             Expanded(
               child: ListView.separated(
-                itemCount: locations.length,
+                itemCount: clinics.length,
                 separatorBuilder: (context, index) => Divider(height: 20),
                 itemBuilder: (context, index) {
-                  final parts = locations[index].split(' - ');
-                  final hospitalName = parts[0].trim();
-                  final hospitalPrice = parts.length > 1 ? parts[1].trim() : fee;
-
+                  final clinic = clinics[index];
                   return InkWell(
                     onTap: () {
                       Navigator.pop(context);
@@ -420,10 +482,13 @@ class DoctorCard extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => BookingScreen(
-                            name: name,
-                            Image: image,
-                            Specialization: specialization,
-                            locations: 'Ahsan mumtaz Hospital',
+                            name: widget.name,
+                            Image: widget.image,
+                            Specialization: widget.specialization,
+                            Secondary_Specialization: widget.secondary_specialization,
+                            locations: clinic['ClinicName'],
+                            Address: clinic['Address'],
+                            qualification: widget.qualification,
                           ),
                         ),
                       );
@@ -432,15 +497,14 @@ class DoctorCard extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Row(
                         children: [
-                          Icon(Icons.local_hospital,
-                              color: Colors.deepOrange.shade400),
+                          Icon(Icons.local_hospital, color: Colors.deepOrange.shade400),
                           SizedBox(width: 15),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  hospitalName,
+                                  clinic['ClinicName'],
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -448,7 +512,7 @@ class DoctorCard extends StatelessWidget {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  hospitalPrice,
+                                  'Fee: Rs. ${clinic['Fees']}',
                                   style: TextStyle(
                                     color: Colors.green.shade700,
                                     fontWeight: FontWeight.w500,
@@ -457,8 +521,7 @@ class DoctorCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right,
-                              color: Colors.grey.shade600),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade600),
                         ],
                       ),
                     ),
@@ -469,6 +532,29 @@ class DoctorCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Monday';
+      case 2: return 'Tuesday';
+      case 3: return 'Wednesday';
+      case 4: return 'Thursday';
+      case 5: return 'Friday';
+      case 6: return 'Saturday';
+      case 7: return 'Sunday';
+      default: return '';
+    }
+  }
+
+  DataRow _buildAvailabilityRow(String label, String day, Map<String, dynamic> availability) {
+    final timings = availability[day];
+    return DataRow(
+      cells: [
+        DataCell(Text(label)),
+        DataCell(Text(timings != null ? '${timings['start']} - ${timings['end']}' : 'Not available')),
+      ],
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../Database/DatabaseServices.dart';
+import '../../UI/BottomNavigationBar.dart';
 import '../../UI/Home.dart';
 
 Future<void> SignInWithGoogle(BuildContext context) async {
@@ -32,7 +33,7 @@ Future<void> SignInWithGoogle(BuildContext context) async {
           .get();
 
       // Store login state
-      final prefs = await SharedPreferences.getInstance();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
 
       Navigator.pop(context); // Remove loading dialog
@@ -40,9 +41,7 @@ Future<void> SignInWithGoogle(BuildContext context) async {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => Home(
-            // Pass user data if needed
-          ),
+          builder: (context) => Tabs(),
         ),
       );
 

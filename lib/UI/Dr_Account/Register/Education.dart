@@ -21,13 +21,13 @@ class _EducationScreenState extends State<EducationScreen> {
 
   void _saveEducation() {
     DatabaseService.AddDrEducationalInfo(
-        uid: user!.uid,
-        Edu_Country: _countryController.text,
-        Edu_City: _cityController.text,
-        College: _collegeController.text,
-        Degree: _degreeController.text,
-        GraduationYear: _graduationYearController.text,
-        PMCNumber: _PMCNumberController.text,
+      uid: user!.uid,
+      Edu_Country: _countryController.text,
+      Edu_City: _cityController.text,
+      College: _collegeController.text,
+      Degree: _degreeController.text,
+      GraduationYear: _graduationYearController.text,
+      PMCNumber: _PMCNumberController.text,
     );
     if (_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(

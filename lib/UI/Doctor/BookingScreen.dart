@@ -4,9 +4,20 @@ class BookingScreen extends StatefulWidget {
   final String name;
   final String Image;
   final String Specialization;
+  final String Secondary_Specialization;
   final String locations;
+  final String Address;
+  final String qualification;
 
-  BookingScreen({required this.name, required this.Image,required this.Specialization,required this.locations});
+  BookingScreen({
+    required this.name,
+    required this.Image,
+    required this.Specialization,
+    required this.locations,
+    required this.Address,
+    required this.Secondary_Specialization,
+    required this.qualification
+  });
 
   @override
   _BookingScreenState createState() => _BookingScreenState();
@@ -70,7 +81,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       children: [
                         CircleAvatar(
                           backgroundImage: AssetImage(widget.Image),
-                          radius: 30,
+                          radius: 40,
                         ),
                         SizedBox(width: 10),
                         Expanded(
@@ -78,7 +89,8 @@ class _BookingScreenState extends State<BookingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(widget.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              Text(widget.Specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                              Text(widget.Specialization + "," + widget.Secondary_Specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                              Text(widget.qualification, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                               //Text(widget.locations, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                             ],
                           ),
@@ -95,10 +107,33 @@ class _BookingScreenState extends State<BookingScreen> {
                     // ),
                     SizedBox(height: 10),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green),
-                        SizedBox(width: 8),
-                        Text(widget.locations,style: TextStyle(fontSize: 16),),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                SizedBox(width: 8),
+                                Icon(Icons.check_circle, color: Colors.green),
+                                SizedBox(width: 8),
+                                Text(widget.locations,style: TextStyle(fontSize: 16),),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                SizedBox(width: 8),
+                                Icon(Icons.location_on, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text(widget.Address,style: TextStyle(fontSize: 16),),
+                              ],
+                            )
+
+                          ],
+                        )
                       ],
                     ),
                     SizedBox(height: 10),

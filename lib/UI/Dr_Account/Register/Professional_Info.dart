@@ -1,14 +1,10 @@
 import 'package:carecub/Database/DatabaseServices.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'Education.dart';
 
 class SignUpStep2 extends StatefulWidget {
-
-  const SignUpStep2({
-
-    super.key,});
+  const SignUpStep2({super.key});
 
   @override
   State<SignUpStep2> createState() => _SignUpStep2State();
@@ -23,47 +19,32 @@ class _SignUpStep2State extends State<SignUpStep2> {
   String? _selectedTitle;
   String? _selectedPrimarySpecialization;
   String? _selectedSecondarySpecialization;
-  String? _selectedService;
-  String? _selectedCondition;
   User? user;
-  void fetchDoctorData() async {
-    try {
-      if (user == null) return; // Ensure user is not null
-      Map<String, dynamic>? doctorData = await DatabaseService.getDrData(user!.uid);
-      if (doctorData != null && mounted) {
-        setState(() {
-          title = doctorData['title'];
-          name = doctorData['name'];
-          _selectedTitle = title;
-          _nameController.text = name ?? ""; // Update controller text
-        });
-      }
-    } catch (e) {
-      print("Error fetching data: $e");
-    }
-  }
 
+  // Lists for multi-select options
+  final List<String> _servicesOptions = [
+    'Consultation', 'Surgery', 'Therapy', 'Rehabilitation', 'Diagnostics',
+  ];
+  final List<String> _conditionsOptions = [
+    'Diabetes', 'Hypertension', 'Asthma', 'Arthritis', 'Cancer',
+  ];
+
+  // Selected services and conditions
+  List<String> _selectedServices = [];
+  List<String> _selectedConditions = [];
 
   final List<String> _specializations = [
     'Pediatrics', 'Cardiology', 'Dermatology', 'Neurology', 'Orthopedics',
     'Endocrinology', 'Gastroenterology', 'Pulmonology', 'Psychiatry', 'Oncology',
   ];
 
-  final List<String> _services = [
-    'Consultation', 'Surgery', 'Therapy', 'Rehabilitation', 'Diagnostics',
-  ];
-
-  final List<String> _conditions = [
-    'Diabetes', 'Hypertension', 'Asthma', 'Arthritis', 'Cancer',
-  ];
-
   @override
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
-    _nameController = TextEditingController(text: ""); // Start with empty text
+    _nameController = TextEditingController(text: "");
     _experienceController = TextEditingController();
-    fetchDoctorData(); // Fetch data after initialization
+    fetchDoctorData();
   }
 
   @override
@@ -71,6 +52,23 @@ class _SignUpStep2State extends State<SignUpStep2> {
     _nameController.dispose();
     _experienceController.dispose();
     super.dispose();
+  }
+
+  void fetchDoctorData() async {
+    try {
+      if (user == null) return;
+      Map<String, dynamic>? doctorData = await DatabaseService.getDrData(user!.uid);
+      if (doctorData != null && mounted) {
+        setState(() {
+          title = doctorData['title'];
+          name = doctorData['name'];
+          _selectedTitle = title;
+          _nameController.text = name ?? "";
+        });
+      }
+    } catch (e) {
+      print("Error fetching data: $e");
+    }
   }
 
   Widget _buildDropdownField({
@@ -89,6 +87,35 @@ class _SignUpStep2State extends State<SignUpStep2> {
         }).toList(),
         onChanged: onChanged,
         validator: (value) => value == null ? 'Please select a $label' : null,
+      ),
+    );
+  }
+
+  Widget _buildMultiSelectSection({
+    required String title,
+    required List<String> options,
+    required List<String> selectedOptions,
+    required Function(String, bool) onSelected,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: options.map((option) => FilterChip(
+                label: Text(option),
+                selected: selectedOptions.contains(option),
+                onSelected: (selected) => onSelected(option, selected),
+              )).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -130,11 +157,9 @@ class _SignUpStep2State extends State<SignUpStep2> {
               // Experience Field
               TextFormField(
                 controller: _experienceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Years of Experience", border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: "Years of Experience", hintText: "1 year", border: OutlineInputBorder()),
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Enter years of experience";
-                  if (double.tryParse(value) == null) return "Enter a valid number";
                   return null;
                 },
               ),
@@ -156,20 +181,36 @@ class _SignUpStep2State extends State<SignUpStep2> {
                 onChanged: (value) => setState(() => _selectedSecondarySpecialization = value),
               ),
 
-              // Services Offered Dropdown
-              _buildDropdownField(
-                label: 'Service Offered',
-                items: _services,
-                value: _selectedService,
-                onChanged: (value) => setState(() => _selectedService = value),
+              // Services Offered (Multi-Select)
+              _buildMultiSelectSection(
+                title: 'Services Offered',
+                options: _servicesOptions,
+                selectedOptions: _selectedServices,
+                onSelected: (option, selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedServices.add(option);
+                    } else {
+                      _selectedServices.remove(option);
+                    }
+                  });
+                },
               ),
 
-              // Conditions Treated Dropdown
-              _buildDropdownField(
-                label: 'Condition Treated',
-                items: _conditions,
-                value: _selectedCondition,
-                onChanged: (value) => setState(() => _selectedCondition = value),
+              // Conditions Treated (Multi-Select)
+              _buildMultiSelectSection(
+                title: 'Conditions Treated',
+                options: _conditionsOptions,
+                selectedOptions: _selectedConditions,
+                onSelected: (option, selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedConditions.add(option);
+                    } else {
+                      _selectedConditions.remove(option);
+                    }
+                  });
+                },
               ),
 
               const SizedBox(height: 30),
@@ -178,17 +219,17 @@ class _SignUpStep2State extends State<SignUpStep2> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
-                    DatabaseService.AddDrProfessional_Info(
-                      uid: user!.uid,
-                      name: _nameController.text,
-                      title: _selectedTitle ?? '',
-                      experience: _experienceController.text,
-                      Primary_specialization: _selectedPrimarySpecialization ??'',
-                      Secondary_specialization: _selectedSecondarySpecialization ?? '',
-                      Service_Offered: _selectedService ?? '',
-                      Condition: _selectedCondition ?? '',
-                    );
                     if (_formKey.currentState!.validate()) {
+                      DatabaseService.AddDrProfessional_Info(
+                        uid: user!.uid,
+                        name: _nameController.text,
+                        title: _selectedTitle ?? '',
+                        experience: _experienceController.text,
+                        Primary_specialization: _selectedPrimarySpecialization ?? '',
+                        Secondary_specialization: _selectedSecondarySpecialization ?? '',
+                        Service_Offered: _selectedServices, // Save as List<String>
+                        Condition: _selectedConditions, // Save as List<String>
+                      );
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => EducationScreen()),

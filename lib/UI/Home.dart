@@ -1,5 +1,6 @@
 import 'package:carecub/UI/DayCare/DayCareListing.dart';
 import 'package:flutter/material.dart';
+import '../DayCare_Account/Register.dart';
 import 'Community/Community.dart';
 import 'CryTranslation/cryUI.dart';
 import 'Doctor/Doctorlist.dart';
@@ -251,7 +252,7 @@ class _HomeState extends State<Home> {
                     Color(0xAFFDFFD6),
                     Colors.yellow, // Shadow color
                         () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=>SignUp()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=>DaycareRegistrationScreen()));
                     },
                   ),
                 ],
