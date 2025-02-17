@@ -7,7 +7,7 @@ class Community extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: CommunityScreenDark(
+      home: CommunityScreen(
         userData: {
           "Email": "test@example.com",
           "Name": "You",
@@ -18,16 +18,16 @@ class Community extends StatelessWidget {
   }
 }
 
-class CommunityScreenDark extends StatefulWidget {
+class CommunityScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  CommunityScreenDark({Key? key, required this.userData}) : super(key: key);
+  CommunityScreen({Key? key, required this.userData}) : super(key: key);
 
   @override
-  State<CommunityScreenDark> createState() => _CommunityScreenDarkState();
+  State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
-class _CommunityScreenDarkState extends State<CommunityScreenDark> {
+class _CommunityScreenState extends State<CommunityScreen> {
   TextEditingController messageController = TextEditingController();
   List<Map<String, dynamic>> messages = [];
 
@@ -41,13 +41,13 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
     messages = [
       {
         "Email": "user1@example.com",
-        "Name": "Alice",
+        "Name": "Ali",
         "message": "Hello everyone! 👋",
         "isImage": false
       },
       {
         "Email": "user2@example.com",
-        "Name": "Bob",
+        "Name": "Bilal",
         "message": "How's your day going?",
         "isImage": false
       },
@@ -59,7 +59,7 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
       },
       {
         "Email": "user4@example.com",
-        "Name": "David",
+        "Name": "Saleem",
         "message": "Anyone here into Flutter? 🧑‍💻",
         "isImage": false
       },
@@ -141,10 +141,10 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: Colors.teal,
-          title: Text("Community Chat"),
+          backgroundColor: Colors.deepOrange.shade500,
+          title: Text("Community Chat",style: TextStyle(color: Colors.white),),
           centerTitle: true,
         ),
         body: Column(
@@ -187,8 +187,8 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
                               padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: isCurrentUser
-                                    ? Colors.teal.shade300
-                                    : Colors.grey.shade800,
+                                    ? Colors.teal.shade200
+                                    : Colors.grey.shade300,
                                 borderRadius: BorderRadius.only(
                                   topLeft: Radius.circular(15),
                                   topRight: Radius.circular(15),
@@ -205,7 +205,7 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
                               )
                                   : Text(
                                 messageData["message"],
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black),
                               ),
                             ),
                           ],
@@ -224,27 +224,27 @@ class _CommunityScreenDarkState extends State<CommunityScreenDark> {
             ),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              color: Colors.grey.shade900,
+              color: Colors.grey.shade200,
               child: Row(
                 children: [
                   IconButton(
                     onPressed: showAlertBox,
-                    icon: Icon(Icons.camera_alt, color: Colors.white),
+                    icon: Icon(Icons.camera_alt, color: Colors.black),
                   ),
                   Expanded(
                     child: TextField(
                       controller: messageController,
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.white54),
+                        hintStyle: TextStyle(color: Colors.black),
                         border: InputBorder.none,
                       ),
                     ),
                   ),
                   IconButton(
                     onPressed: sendMessage,
-                    icon: Icon(Icons.send, color: Colors.teal),
+                    icon: Icon(Icons.send,size: 28, color: Colors.deepOrange.shade500),
                   ),
                 ],
               ),

@@ -22,8 +22,9 @@ class BookingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Bookings'),
+        title: Text('My Bookings',style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.deepOrange.shade400,
+        centerTitle: true,
       ),
       body: ListView.builder(
         padding: EdgeInsets.all(16),

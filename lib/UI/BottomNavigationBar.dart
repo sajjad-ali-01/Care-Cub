@@ -14,7 +14,6 @@ class Tabs extends StatefulWidget {
 class _TabsState extends State<Tabs> {
   int currentIndex = 0;
 
-  // List of pages for navigation
   final List<Widget> body = [
     Home(),
     CryCaptureScreen(),

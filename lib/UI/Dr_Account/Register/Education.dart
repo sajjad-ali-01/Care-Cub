@@ -1,8 +1,7 @@
 import 'package:carecub/Database/DatabaseServices.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../../Logic/Users/ParentsLogic.dart';
-import 'advanced_profile_info.dart'; // Import the Advanced Profile Info screen
+import 'Clinic.dart';
 
 class EducationScreen extends StatefulWidget {
   @override
@@ -11,31 +10,56 @@ class EducationScreen extends StatefulWidget {
 
 class _EducationScreenState extends State<EducationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _countryController = TextEditingController(text: "Pakistan");
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _collegeController = TextEditingController();
-  final TextEditingController _degreeController = TextEditingController();
-  final TextEditingController _graduationYearController = TextEditingController();
-  final TextEditingController _PMCNumberController = TextEditingController();
   final User? user = FirebaseAuth.instance.currentUser;
 
-  void _saveEducation() {
-    DatabaseService.AddDrEducationalInfo(
-      uid: user!.uid,
-      Edu_Country: _countryController.text,
-      Edu_City: _cityController.text,
-      College: _collegeController.text,
-      Degree: _degreeController.text,
-      GraduationYear: _graduationYearController.text,
-      PMCNumber: _PMCNumberController.text,
-    );
+  final TextEditingController PMCNumberController = TextEditingController();
+
+  List<String> degrees = [
+    "MBBS", "MD", "MS", "PhD", "BDS", "DCH", "DNB", "MRCPCH", "FAAP", "DM",
+    "MSc", "MPH", "DPed", "FCPS", "MCh", "DO", "PG Diploma", "BSc Nursing", "MPhil", "FRCPCH",
+  ];
+
+  Map<String, Map<String, String>> degreeDetails = {};
+  Map<String, bool> isDegreeSelected = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (var degree in degrees) {
+      degreeDetails[degree] = {
+        'country': '',
+        'city': '',
+        'college': '',
+        'year': '',
+      };
+      isDegreeSelected[degree] = false;
+    }
+  }
+
+  void saveEducation() {
     if (_formKey.currentState!.validate()) {
+      List<String> selectedDegreeList = [];
+      for (var degree in degrees) {
+        if (isDegreeSelected[degree] ?? false) {
+          selectedDegreeList.add(
+            "$degree (${degreeDetails[degree]!['year']}) - ${degreeDetails[degree]!['college']}, ${degreeDetails[degree]!['city']}, ${degreeDetails[degree]!['country']}",
+          );
+        }
+      }
+
+      DatabaseService.AddDrEDU_INFO(
+        uid: user!.uid,
+        EDU_INFO: selectedDegreeList,
+        PMCNumber: PMCNumberController.text,
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Education Details Saved Successfully!")),
       );
+
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => AdvancedProfileInfoPage()),
+        MaterialPageRoute(builder: (context) => AddClinicScreen()),
       );
     }
   }
@@ -58,47 +82,87 @@ class _EducationScreenState extends State<EducationScreen> {
               Text("Education Details", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               SizedBox(height: 20),
 
-              TextFormField(
-                controller: _countryController,
-                readOnly: true,
-                decoration: InputDecoration(labelText: "Country", border: OutlineInputBorder()),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemCount: degrees.length,
+                itemBuilder: (context, index) {
+                  String degree = degrees[index];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CheckboxListTile(
+                        title: Text(degree, style: TextStyle(fontSize: 18)),
+                        value: isDegreeSelected[degree] ?? false,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            isDegreeSelected[degree] = value ?? false;
+                          });
+                        },
+                      ),
+
+                      if (isDegreeSelected[degree] ?? false)
+                        Column(
+                          children: [
+                            TextFormField(
+                              decoration: InputDecoration(labelText: "Country for $degree", border: OutlineInputBorder()),
+                              onChanged: (value) {
+                                setState(() {
+                                  degreeDetails[degree]!['country'] = value;
+                                });
+                              },
+                              validator: (value) => value!.isEmpty ? "Enter country for $degree" : null,
+                            ),
+                            SizedBox(height: 10),
+
+                            TextFormField(
+                              decoration: InputDecoration(labelText: "City for $degree", border: OutlineInputBorder()),
+                              onChanged: (value) {
+                                setState(() {
+                                  degreeDetails[degree]!['city'] = value;
+                                });
+                              },
+                              validator: (value) => value!.isEmpty ? "Enter city for $degree" : null,
+                            ),
+                            SizedBox(height: 10),
+
+                            TextFormField(
+                              decoration: InputDecoration(labelText: "College/University for $degree", border: OutlineInputBorder()),
+                              onChanged: (value) {
+                                setState(() {
+                                  degreeDetails[degree]!['college'] = value;
+                                });
+                              },
+                              validator: (value) => value!.isEmpty ? "Enter college/university for $degree" : null,
+                            ),
+                            SizedBox(height: 10),
+
+                            TextFormField(
+                              decoration: InputDecoration(labelText: "Completion Year for $degree", border: OutlineInputBorder()),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                setState(() {
+                                  degreeDetails[degree]!['year'] = value;
+                                });
+                              },
+                              validator: (value) => value!.isEmpty ? "Enter completion year for $degree" : null,
+                            ),
+                            SizedBox(height: 20),
+                          ],
+                        ),
+                    ],
+                  );
+                },
               ),
               SizedBox(height: 20),
 
               TextFormField(
-                controller: _cityController,
-                decoration: InputDecoration(labelText: "City", border: OutlineInputBorder()),
-                validator: (value) => value!.isEmpty ? "Enter your city" : null,
-              ),
-              SizedBox(height: 20),
-
-              TextFormField(
-                controller: _collegeController,
-                decoration: InputDecoration(labelText: "College/University", border: OutlineInputBorder()),
-                validator: (value) => value!.isEmpty ? "Enter your college/university" : null,
-              ),
-              SizedBox(height: 20),
-
-              TextFormField(
-                controller: _degreeController,
-                decoration: InputDecoration(labelText: "Degree", border: OutlineInputBorder()),
-                validator: (value) => value!.isEmpty ? "Enter your degree" : null,
-              ),
-              SizedBox(height: 20),
-
-              TextFormField(
-                controller: _graduationYearController,
-                decoration: InputDecoration(labelText: "Graduation Year", border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
-                validator: (value) => value!.isEmpty ? "Enter your graduation year" : null,
-              ),
-              SizedBox(height: 20),
-              TextFormField(
-                controller: _PMCNumberController,
+                controller: PMCNumberController,
                 decoration: InputDecoration(labelText: "PMC Registration Number", border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
                 validator: (value) => value!.isEmpty ? "Enter your PMC Registration Number" : null,
               ),
+
               SizedBox(height: 30),
 
               Center(
@@ -107,7 +171,7 @@ class _EducationScreenState extends State<EducationScreen> {
                     backgroundColor: Colors.deepOrange,
                     padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   ),
-                  onPressed: _saveEducation,
+                  onPressed: saveEducation,
                   child: Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
               ),

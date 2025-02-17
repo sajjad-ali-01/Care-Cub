@@ -12,11 +12,9 @@ class _NutritionGuidanceScreenState extends State<NutritionGuidanceScreen> {
   String dietType = 'Vegetarian';
   String snackFrequency = 'Once a day';
 
-  // Example of AI-generated results (mock data)
   String vitaminDeficiency = '';
   String mealSuggestion = '';
 
-  // Mock AI prediction function
   void predictNutrition() {
     setState(() {
       if (activityLevel == 'Low' && snackFrequency == 'Rarely') {
@@ -53,7 +51,6 @@ class _NutritionGuidanceScreenState extends State<NutritionGuidanceScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              // Question 1: Activity Level
               Text('1. What is the child\'s activity level?'),
               DropdownButtonFormField<String>(
                 value: activityLevel,
@@ -74,7 +71,6 @@ class _NutritionGuidanceScreenState extends State<NutritionGuidanceScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              // Question 2: Diet Type
               Text('2. What type of diet does the child follow?'),
               DropdownButtonFormField<String>(
                 value: dietType,
@@ -95,7 +91,6 @@ class _NutritionGuidanceScreenState extends State<NutritionGuidanceScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              // Question 3: Snack Frequency
               Text('3. How often does the child have snacks?'),
               DropdownButtonFormField<String>(
                 value: snackFrequency,

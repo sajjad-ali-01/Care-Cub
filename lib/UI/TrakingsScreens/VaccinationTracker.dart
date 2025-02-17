@@ -18,27 +18,27 @@ class VaccinationTrackerScreen extends StatefulWidget {
 }
 
 class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
-  final List<Vaccine> _vaccines = [];
-  final _vaccineController = TextEditingController();
-  DateTime? _selectedDate;
+  final List<Vaccine> vaccines = [];
+  final vaccineController = TextEditingController();
+  DateTime? selectedDate;
 
   void _addVaccine() {
-    if (_vaccineController.text.isEmpty || _selectedDate == null) return;
+    if (vaccineController.text.isEmpty || selectedDate == null) return;
 
     setState(() {
-      _vaccines.add(Vaccine(
-        name: _vaccineController.text,
-        date: _selectedDate!,
+      vaccines.add(Vaccine(
+        name: vaccineController.text,
+        date: selectedDate!,
       ));
     });
 
-    _vaccineController.clear();
-    _selectedDate = null;
+    vaccineController.clear();
+    selectedDate = null;
 
     Navigator.of(context).pop();
   }
 
-  void _showAddVaccineDialog() {
+  void showAddVaccineDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -47,16 +47,16 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: _vaccineController,
+              controller: vaccineController,
               decoration: InputDecoration(labelText: "Vaccine Name"),
             ),
             SizedBox(height: 10),
             TextButton(
-              onPressed: _pickDate,
+              onPressed: pickDate,
               child: Text(
-                _selectedDate == null
+                selectedDate == null
                     ? "Select Date"
-                    : "Selected Date: ${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
+                    : "Selected Date: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}",
               ),
             ),
           ],
@@ -75,23 +75,23 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
     );
   }
 
-  void _pickDate() async {
+  void pickDate() async {
     final now = DateTime.now();
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: now,
-      firstDate: now.subtract(Duration(days: 365)), // Past one year
-      lastDate: now.add(Duration(days: 365 * 5)), // Next five years
+      firstDate: now.subtract(Duration(days: 365)),
+      lastDate: now.add(Duration(days: 365 * 5)),
     );
 
     if (pickedDate != null) {
       setState(() {
-        _selectedDate = pickedDate;
+        selectedDate = pickedDate;
       });
     }
   }
 
-  void _showVaccineDetails(Vaccine vaccine) {
+  void showVaccineDetails(Vaccine vaccine) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -116,7 +116,7 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
         title: Text("Vaccination Tracker"),
         backgroundColor: Colors.green,
       ),
-      body: _vaccines.isEmpty
+      body: vaccines.isEmpty
           ? Center(
         child: Text(
           "No vaccinations added yet.\nTap + to add a new vaccine.",
@@ -125,9 +125,9 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
         ),
       )
           : ListView.builder(
-        itemCount: _vaccines.length,
+        itemCount: vaccines.length,
         itemBuilder: (ctx, index) {
-          final vaccine = _vaccines[index];
+          final vaccine = vaccines[index];
           return ListTile(
             leading: Icon(
               Icons.vaccines,
@@ -148,12 +148,12 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
               "Completed",
               style: TextStyle(color: Colors.green),
             ),
-            onTap: () => _showVaccineDetails(vaccine),
+            onTap: () => showVaccineDetails(vaccine),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddVaccineDialog,
+        onPressed: showAddVaccineDialog,
         backgroundColor: Colors.green,
         child: Icon(Icons.add),
       ),
@@ -168,4 +168,3 @@ class Vaccine {
   Vaccine({required this.name, required this.date});
 }
 
-void main() => runApp(VaccinationTrackerApp());

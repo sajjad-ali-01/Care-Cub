@@ -1,19 +1,21 @@
-import 'package:carecub/UI/User/Register.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/Users/ParentsLogic.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../BottomNavigationBar.dart';
-import 'ForgotPassword.dart';
+import '../../Logic/Users/ParentsLogic.dart';
+import '../DayCare/Daycarecenter/MainScreen.dart';
+import '../User/ForgotPassword.dart';
+import 'Register.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+
+class DayCareLogin extends StatefulWidget {
+  const DayCareLogin({super.key});
 
   @override
-  _LoginState createState() => _LoginState();
+  _DayCareLoginState createState() => _DayCareLoginState();
 }
 
-class _LoginState extends State<Login> {
+class _DayCareLoginState extends State<DayCareLogin> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -31,28 +33,36 @@ class _LoginState extends State<Login> {
 
       User? user = userCredential.user;
       if (user != null && user.emailVerified) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('DayCare')
+            .doc(user.uid)
+            .get();
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => Tabs()),
-              (Route<dynamic> route) => false,
-        );
+
+        if (userDoc.exists && userDoc['isVerified']==true) {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isDaCareLoggedIn', true);
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => MainScreen()),
+                (Route<dynamic> route) => false,
+          );
+        } else {
+          await FirebaseAuth.instance.signOut();
+          showToast(message: 'You are not authorized to Login here');
+
+        }
       } else {
         await FirebaseAuth.instance.signOut();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please verify your email first.')),
-        );
+        showToast(message: 'Account not exists');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      showToast(message: 'Wrong Credentials');
     }
   }
 
-  void login(BuildContext context) async {
+  void DayCareLogin(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         isLoading = true;
@@ -65,9 +75,7 @@ class _LoginState extends State<Login> {
           context: context,
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.toString()}')),
-        );
+        showToast(message: "Login Failed");
       } finally {
         setState(() {
           isLoading = false;
@@ -99,6 +107,7 @@ class _LoginState extends State<Login> {
                             fontWeight: FontWeight.w900,
                             color: Colors.deepOrange),
                       ),
+                      SizedBox(height: 20),
                       CircleAvatar(
                         radius: 60,
                         backgroundImage:
@@ -106,7 +115,7 @@ class _LoginState extends State<Login> {
                       ),
                       SizedBox(height: 10),
                       Text(
-                        "Login to Your Account",
+                        "Welcome To Daycare Center's Portal",
                         style: TextStyle(
                             fontSize: 18, color: Colors.grey[800]),
                       ),
@@ -192,7 +201,7 @@ class _LoginState extends State<Login> {
                       ElevatedButton(
                         onPressed: isLoading
                             ? null
-                            : () => login(context), // Disable while loading
+                            : () => DayCareLogin(context), // Disable while loading
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange,
                           padding: EdgeInsets.symmetric(
@@ -212,59 +221,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              "Or Login With",
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
                       SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              SignInWithGoogle(context);
-                            },
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundImage:
-                              AssetImage('assets/images/google_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () {},
-                            child: CircleAvatar(
-                              radius: 25,
-                              backgroundImage:
-                              AssetImage('assets/images/facebook_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                        ],
-                      ),
                       SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +237,7 @@ class _LoginState extends State<Login> {
                               Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => Register()));
+                                      builder: (context) => DaycareRegistrationScreen()));
                             },
                             child: Text(
                               'Create Account',

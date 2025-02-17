@@ -92,7 +92,7 @@ class _DayCareListState extends State<DayCareList> {
               type: "Premium Daycare",
               rating: "4.8 (320 reviews)",
               price: "Rs. 800/day",
-              description: "A premium childcare center offering...", // Corrected parameter
+              description: "A premium childcare center offering...",
               ageRange: "1-5 years",
               hours: "Mon-Fri 8am-7pm, Sat 9am-4pm",
               capacity: "50 children",
@@ -123,7 +123,7 @@ class _DayCareListState extends State<DayCareList> {
                 "assets/images/daycareCenter1.webp",
                 "assets/images/daycareCenter2.webp",
                 "assets/images/daycareCenter3.webp",
-                // ... other images
+
               ],
               address: "123 Green Valley Road, Downtown",
               phone: "+92 300 123 4567",
@@ -142,7 +142,7 @@ class DaycareCard extends StatelessWidget {
   final String type;
   final String rating;
   final String price;
-  final String description; // Corrected from 'discription'
+  final String description;
   final String ageRange;
   final String hours;
   final String capacity;
@@ -323,25 +323,24 @@ class DaycareCard extends StatelessWidget {
                 )).toList(),
               ),
               SizedBox(height: 15),
-              // Enhanced Horizontal Scrolling Section
               Container(
                 height: 110,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _buildInfoCard(
+                    buildInfoCard(
                       title: "Facilities",
                       icon: Icons.emoji_food_beverage,
                       items: facilities,
                       color: Colors.blue.shade100,
                     ),
-                    _buildInfoCard(
+                    buildInfoCard(
                       title: "Safety Features",
                       icon: Icons.security,
                       items: safetyFeatures,
                       color: Colors.green.shade100,
                     ),
-                    _buildInfoCard(
+                    buildInfoCard(
                       title: "Special Offers",
                       icon: Icons.local_offer,
                       items: highlights,
@@ -381,7 +380,7 @@ class DaycareCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard({
+  Widget buildInfoCard({
     required String title,
     required IconData icon,
     required List<String> items,

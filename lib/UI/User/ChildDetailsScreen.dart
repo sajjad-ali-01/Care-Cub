@@ -1,275 +1,161 @@
-import 'package:carecub/UI/User/Register.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/Users/ParentsLogic.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../Home.dart';
-import 'ForgotPassword.dart';
+import '../BottomNavigationBar.dart';
 
-class ChildDetailsScreen extends StatefulWidget {
-  const ChildDetailsScreen({super.key});
-
+class BabyProfileScreen extends StatefulWidget {
   @override
-  _ChildDetailsScreenState createState() => _ChildDetailsScreenState();
+  _BabyProfileScreenState createState() => _BabyProfileScreenState();
 }
 
-class _ChildDetailsScreenState extends State<ChildDetailsScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _isPasswordVisible = false;
+class _BabyProfileScreenState extends State<BabyProfileScreen> {
+  TextEditingController nameController = TextEditingController();
 
-  void _ChildDetailsScreen(BuildContext context) async {
-    if (_formKey.currentState!.validate()) {
+  DateTime? selectedDate;
+  String selectedGender = "Boy";
+
+  Future<void> pickDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2015),
+      lastDate: DateTime.now(),
+    );
+    if (pickedDate != null) {
       setState(() {
-        _isLoading = true;
+        selectedDate = pickedDate;
       });
-
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        // Save ChildDetailsScreen state in SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-
-        // Navigate to the Home screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => Home()),
-        );
-      } on FirebaseAuthException catch (e) {
-        String errorMessage;
-        if (e.code == 'user-not-found') {
-          errorMessage = 'No user found for this email.';
-        } else if (e.code == 'wrong-password') {
-          errorMessage = 'Wrong password provided.';
-        } else {
-          errorMessage = 'ChildDetailsScreen failed. Please try again.';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
+  Future<void> setUserLoggedIn() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+  }
 
+  Future<void> saveBabyProfile() async {
+    if (nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter child details')),
+      );
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User not logged in')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('babyProfiles')
+          .add({
+        'name': nameController.text,
+        'dateOfBirth': selectedDate,
+        'gender': selectedGender,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      setUserLoggedIn();
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => Tabs()),
+            (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save baby profile: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 25),
-                  Column(
-                    children: [
-                      Text(
-                        "ChildDetailsScreen to Your Account",
-                        style: TextStyle(
-                            fontSize: 18, color: Colors.grey[800]),
-                      ),
-                      SizedBox(height: 25),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.email_outlined),
-                          hintText: 'Email',
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          } else if (!RegExp(
-                              r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-                              .hasMatch(value)) {
-                            return 'Please enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 20),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(_isPasswordVisible
-                                ? Icons.visibility
-                                : Icons.visibility_off),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                          hintText: 'Password',
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          } else if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: false,
-                                onChanged: (value) {},
-                              ),
-                              Text(
-                                "Remember me",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                          TextButton(
-                              onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (context)=>ForgotPassword()));
-                              },
-                              child: Text(
-                                "Forgot password?",
-                                style: TextStyle(color: Colors.deepOrange),
-                              )),
-                        ],
-                      ),
-                      SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _ChildDetailsScreen(context), // Disable while loading
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepOrange,
-                          padding: EdgeInsets.symmetric(
-                              vertical: 10, horizontal: 110),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: _isLoading
-                            ? CircularProgressIndicator(
-                          color: Colors.white,
-                        )
-                            : Text(
-                          "All Done",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              "Or ChildDetailsScreen With",
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              //SignInWithGoogle(context);
-                            },
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundImage:
-                              AssetImage('assets/images/google_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () {},
-                            child: CircleAvatar(
-                              radius: 25,
-                              backgroundImage:
-                              AssetImage('assets/images/facebook_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Don't have an account?",
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => Register()));
-                            },
-                            child: Text(
-                              'Create Account',
-                              style: TextStyle(
-                                color: Colors.deepOrange,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-                ],
+      backgroundColor: Color(0xFFFF8C66),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(height: 60),
+              Text("Baby Profile", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.purple.shade900)),
+              SizedBox(height: 5),
+              Text("Personalize your experience", style: TextStyle(fontSize: 16, color: Colors.black54)),
+
+              SizedBox(height: 30),
+              Text("What’s your baby’s name?",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  textAlign: TextAlign.center),
+              SizedBox(height: 8),
+              Text("Or nickname", style: TextStyle(color: Colors.black54)),
+
+              SizedBox(height: 10),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: "Enter name",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
               ),
-            ),
+
+              SizedBox(height: 25),
+              Text("Choose child's Date of Birth", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              SizedBox(height: 15),
+              SizedBox(height: 10),
+              GestureDetector(
+                onTap: pickDate,
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                  child: Text(
+                    selectedDate == null ? "Tap to select Date" : "${selectedDate!.day}-${selectedDate!.month}-${selectedDate!.year}",
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 25),
+              Text("Select your baby’s gender", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              SizedBox(height: 15),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: ["Boy", "Girl", "Prefer not to say"].map((gender) {
+                  return GestureDetector(
+                    onTap: () => setState(() => selectedGender = gender),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Chip(
+                        label: Text(gender, style: TextStyle(color: selectedGender == gender ? Colors.white : Colors.black)),
+                        backgroundColor: selectedGender == gender ? Colors.deepOrange.shade600 : Colors.white,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              SizedBox(height: 130),
+              ElevatedButton(
+                onPressed: saveBabyProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                ),
+                child: Text("Next →", style: TextStyle(color: Colors.purple.shade900, fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              SizedBox(height: 20),
+            ],
           ),
         ),
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../Database/DatabaseServices.dart';
+import '../../../Database/DataBaseReadServices.dart';
 import 'BookingScreen.dart';
 
 class DoctorProfile extends StatefulWidget {
@@ -13,35 +12,34 @@ class DoctorProfile extends StatefulWidget {
 }
 
 class _DoctorProfileState extends State<DoctorProfile> {
-  List<Map<String, dynamic>> clinics = [];// List to store clinics
+  List<Map<String, dynamic>> clinics = [];
   List<Map<String, dynamic>> educationList = [];
-  bool isLoading = true; // Track loading state // Get services from doctor data
+  bool isLoading = true;
   @override
   void initState() {
     super.initState();
-    fetchClinics(); // Fetch clinics when the widget initializes
+    fetchClinics();
   }
 
-  // Fetch clinics from Firestore
   Future<void> fetchClinics() async {
     try {
       List<Map<String, dynamic>> fetchedClinics =
-      await DatabaseService.getDoctorClinics(widget.doctor['uid']);
+      await DataBaseReadServices.getDoctorClinics(widget.doctor['uid']);
       setState(() {
         clinics = fetchedClinics;
-        isLoading = false; // Update loading state
+        isLoading = false;
       });
     } catch (e) {
       print("Error fetching clinics: $e");
       setState(() {
-        isLoading = false; // Update loading state even if there's an error
+        isLoading = false;
       });
     }
   }
   Future<void> fetchEducationDetails() async {
     try {
       List<Map<String, dynamic>> fetchedEducation =
-      await DatabaseService.getDoctorEducation(widget.doctor['uid']);
+      await DataBaseReadServices.getDoctorEducation(widget.doctor['uid']);
       setState(() {
         educationList = fetchedEducation;
         isLoading = false;
@@ -127,7 +125,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
                 Secondary_Specialization: widget.doctor['secondary_specialization'],
                 clinics: clinics, // Pass clinics
                 isLoading: isLoading,
-                qualification: widget.doctor['qualification'],// Pass isLoading
+                qualification: widget.doctor['qualification'],
               ),
               Services(),
               ReviewCard(),
@@ -169,7 +167,6 @@ class _DoctorProfileState extends State<DoctorProfile> {
   }
 
   Widget Services() {
-    // Ensure services is a List<String>
     List<String> servicesList = List<String>.from(widget.doctor['services'] ?? []);
 
     return Card(
@@ -184,7 +181,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
         ),
         children: servicesList.map((service) {
           return ListTile(
-            title: Text(service.trim()), // Trim to remove extra spaces
+            title: Text(service.trim()),
           );
         }).toList(),
       ),
@@ -412,8 +409,8 @@ class ClinicDetails extends StatefulWidget {
   final String specialization;
   final String Secondary_Specialization;
   final String qualification;
-  final List<Map<String, dynamic>> clinics; // Add clinics parameter
-  final bool isLoading; // Add isLoading parameter
+  final List<Map<String, dynamic>> clinics;
+  final bool isLoading;
 
   ClinicDetails({
     required this.doctorName,
@@ -455,16 +452,10 @@ class _ClinicDetailsState extends State<ClinicDetails> {
         final availability = clinic['Availability'] as Map<String, dynamic>? ?? {};
         final now = DateTime.now();
         final tomorrow = now.add(Duration(days: 1));
-
-        // Get today and tomorrow's availability
         final todayDay = _getDayName(now.weekday);
         final tomorrowDay = _getDayName(tomorrow.weekday);
-
-        // Create default rows for today and tomorrow
         final DataRow todayRow = _buildAvailabilityRow('Today', todayDay, availability);
         final DataRow tomorrowRow = _buildAvailabilityRow('Tomorrow', tomorrowDay, availability);
-
-        // Create rows for all availability days
         final List<DataRow> allAvailabilityRows = availability.entries.map((entry) {
           return DataRow(
             cells: [

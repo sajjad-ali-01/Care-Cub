@@ -29,7 +29,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
       setState(() {
         isTimerRunning = true;
         startTime = DateTime.now();
-        endTime = null; // Clear end time when restarting
+        endTime = null;
       });
 
       timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -69,7 +69,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFFD6), // Light background color
+      backgroundColor: Color(0xFFFFFFD6),
       body: Column(
         children: [
           SizedBox(height: 50),
@@ -156,7 +156,6 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
             ),
           ),
           SizedBox(height: 20),
-          // Start, Stop, and Reset Buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -196,7 +195,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
             icon: Icon(Icons.check, color: Colors.white),
             label: Text("Save routine"),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFFB8A27D), // Matches the background
+              backgroundColor: Color(0xFFB8A27D),
               padding: EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

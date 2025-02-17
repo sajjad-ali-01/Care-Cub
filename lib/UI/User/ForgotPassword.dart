@@ -9,19 +9,19 @@ class ForgotPassword extends StatefulWidget {
 }
 
 class _ForgotPasswordState extends State<ForgotPassword> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
+  bool isLoading = false;
 
-  void _resetPassword() async {
+  void resetPassword() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        _isLoading = true;
+        isLoading = true;
       });
 
       try {
         await FirebaseAuth.instance.sendPasswordResetEmail(
-          email: _emailController.text.trim(),
+          email: emailController.text.trim(),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Password reset link sent to your email!')),
@@ -37,7 +37,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         );
       } finally {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -75,7 +75,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   ),
                   SizedBox(height: 25),
                   TextFormField(
-                    controller: _emailController,
+                    controller: emailController,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.email_outlined),
                       hintText: 'Email',
@@ -96,14 +96,14 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   ),
                   SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _resetPassword,
+                    onPressed: isLoading ? null : resetPassword,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepOrange,
                       padding: EdgeInsets.symmetric(vertical: 10, horizontal: 110),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: _isLoading
+                    child: isLoading
                         ? CircularProgressIndicator(
                       color: Colors.white,
                     )

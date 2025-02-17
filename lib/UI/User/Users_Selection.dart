@@ -1,8 +1,8 @@
 import 'package:carecub/UI/User/Login.dart';
-import 'package:carecub/UI/User/Register.dart';
 import 'package:flutter/material.dart';
 
-import '../Dr_Account/Register/SignUp.dart';
+import '../DayCare_Account/Login.dart';
+import '../Dr_Account/Login.dart';
 
 class RoleSelection extends StatelessWidget {
   @override
@@ -35,7 +35,7 @@ class RoleSelection extends StatelessWidget {
                         foreground: Paint()
                           ..style = PaintingStyle.stroke
                           ..strokeWidth = 2.5
-                          ..color = Colors.white, // White outline
+                          ..color = Colors.white,
                       ),
                     ),
                     // Main text (filled color)
@@ -44,7 +44,7 @@ class RoleSelection extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.purple.shade900, // Main text color
+                        color: Colors.purple.shade900,
                       ),
                     ),
                   ],
@@ -77,7 +77,7 @@ class RoleSelection extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const SignUp()),
+                          MaterialPageRoute(builder: (context) => const DrLogin()),
                         );
                       },
                     ),
@@ -90,7 +90,7 @@ class RoleSelection extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const Register()),
+                          MaterialPageRoute(builder: (context) => DayCareLogin()),
                         );
                       },
                     ),

@@ -24,6 +24,10 @@ class User_Deletion{
       // Example: Delete user document from 'users' collection
       await firestore.collection('users').doc(uid).delete();
       print('User document deleted from Firestore');
+      await firestore.collection('DayCare').doc(uid).delete();
+      print('User document deleted from Firestore');
+      await firestore.collection('Doctors').doc(uid).delete();
+      print('User document deleted from Firestore');
 
       // Example: Delete all posts by the user from 'posts' collection
       final QuerySnapshot postsSnapshot = await firestore
@@ -43,6 +47,7 @@ class User_Deletion{
       throw e;
     }
   }
+
   static Future<void> deleteUserAccount() async {
     final User? user = FirebaseAuth.instance.currentUser;
 
@@ -53,6 +58,8 @@ class User_Deletion{
 
         // Step 2: Delete user documents from Firestore
         await deleteUserDocumentsFromFirestore(user.uid);
+
+
 
         print('User account and associated data deleted successfully');
       } catch (e) {

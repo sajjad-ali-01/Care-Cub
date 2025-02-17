@@ -1,9 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../../../Database/DatabaseServices.dart';
 import '../../../Logic/Users/ParentsLogic.dart';
-import 'Professional_Info.dart';
 import 'EmailVerificationScreen.dart';
 
 
@@ -16,30 +13,30 @@ class SignUp extends StatefulWidget {
 
 class _SignUpState extends State<SignUp> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _countryController = TextEditingController(text: "Pakistan");
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  final nameController = TextEditingController();
+  final countryController = TextEditingController(text: "Pakistan");
 
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
 
-  String? _selectedTitle;
-  String? _selectedCity;
-  bool _isLoading = false;
+  String? selectedTitle;
+  String? selectedCity;
+  bool isLoading = false;
   final List<String> _cities = [
     'Karachi', 'Lahore', 'Islamabad'
   ];
 
-  Future<void> _registerUser({
+  Future<void> registerUser({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
 
     try {
       final User? user = await BackendService.registerUser(email, password);
@@ -51,11 +48,11 @@ class _SignUpState extends State<SignUp> {
           context,
           MaterialPageRoute(
             builder: (context) => EmailVerificationScreen(
-              name: _nameController.text.trim(),
+              name: nameController.text.trim(),
               email: email,
-              phone: _phoneController.text.trim(),
-              title: _selectedTitle ??'',
-              city: _selectedCity ?? "",
+              phone: phoneController.text.trim(),
+              title: selectedTitle ??'',
+              city: selectedCity ?? "",
               user: user,
               password: password,
             ),
@@ -67,7 +64,7 @@ class _SignUpState extends State<SignUp> {
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => isLoading = false);
     }
   }
 
@@ -95,7 +92,7 @@ class _SignUpState extends State<SignUp> {
 
                 // Title Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedTitle,
+                  value: selectedTitle,
                   dropdownColor: Color(0xFFFFEBFF),
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
@@ -112,7 +109,7 @@ class _SignUpState extends State<SignUp> {
                       .toList(),
                   onChanged: (value) {
                     setState(() {
-                      _selectedTitle = value;
+                      selectedTitle = value;
                     });
                   },
                   validator: (value) =>
@@ -122,7 +119,7 @@ class _SignUpState extends State<SignUp> {
 
                 // Name Field
                 TextFormField(
-                  controller: _nameController,
+                  controller: nameController,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.person),
                     hintText: 'Full Name',
@@ -137,7 +134,7 @@ class _SignUpState extends State<SignUp> {
 
                 // Country Field (Fixed)
                 TextFormField(
-                  controller: _countryController,
+                  controller: countryController,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.flag),
                     border: OutlineInputBorder(
@@ -150,7 +147,7 @@ class _SignUpState extends State<SignUp> {
 
                 // City Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCity,
+                  value: selectedCity,
                   dropdownColor: Color(0xFFFFEBFF),
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
@@ -167,7 +164,7 @@ class _SignUpState extends State<SignUp> {
                       .toList(),
                   onChanged: (value) {
                     setState(() {
-                      _selectedCity = value;
+                      selectedCity = value;
                     });
                   },
                   validator: (value) =>
@@ -175,9 +172,8 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
-                // Email Field
                 TextFormField(
-                  controller: _emailController,
+                  controller: emailController,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.email_outlined),
                     hintText: 'Email',
@@ -190,9 +186,8 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
-                // Phone Number Field
                 TextFormField(
-                  controller: _phoneController,
+                  controller: phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
                     prefixIcon: Padding(
@@ -221,8 +216,8 @@ class _SignUpState extends State<SignUp> {
 
                 // Password Field
                 TextFormField(
-                  controller: _passwordController,
-                  obscureText: !_isPasswordVisible,
+                  controller: passwordController,
+                  obscureText: !isPasswordVisible,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.lock_outline),
                     hintText: 'Password',
@@ -231,11 +226,11 @@ class _SignUpState extends State<SignUp> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isPasswordVisible = !_isPasswordVisible;
+                          isPasswordVisible = !isPasswordVisible;
                         });
                       },
                     ),
@@ -251,10 +246,9 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
-                // Confirm Password Field
                 TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: !_isConfirmPasswordVisible,
+                  controller: confirmPasswordController,
+                  obscureText: !isConfirmPasswordVisible,
                   decoration: InputDecoration(
                     prefixIcon: Icon(Icons.lock_outline),
                     hintText: 'Confirm Password',
@@ -263,13 +257,13 @@ class _SignUpState extends State<SignUp> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isConfirmPasswordVisible
+                        isConfirmPasswordVisible
                             ? Icons.visibility
                             : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          isConfirmPasswordVisible = !isConfirmPasswordVisible;
                         });
                       },
                     ),
@@ -277,7 +271,7 @@ class _SignUpState extends State<SignUp> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Confirm your password';
-                    } else if (value != _passwordController.text) {
+                    } else if (value != passwordController.text) {
                       return 'Passwords do not match';
                     }
                     return null;
@@ -288,7 +282,7 @@ class _SignUpState extends State<SignUp> {
                 //Next Button
                 ElevatedButton(
                   onPressed: (){
-                    _registerUser(email: _emailController.text, password: _passwordController.text, context: context);
+                    registerUser(email: emailController.text, password: passwordController.text, context: context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,

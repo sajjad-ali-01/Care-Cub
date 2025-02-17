@@ -10,7 +10,7 @@ class DaycareDetailScreen extends StatefulWidget {
 }
 
 class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
-  bool _isExpanded = false;
+  bool isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +40,15 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
           ),
           SliverList(
             delegate: SliverChildListDelegate([
-              _buildOverviewSection(),
-              _buildFacilitiesSection(),
-              _buildSafetyFeatures(),
-              _buildProgramsSection(),
-              _buildGallerySection(),
-              _buildReviewsSection(),
-              _buildHoursSection(),
-              _buildContactSection(),
-              _buildBookButton(),
+              buildOverviewSection(),
+              buildFacilitiesSection(),
+              buildSafetyFeatures(),
+              buildProgramsSection(),
+              buildGallerySection(),
+              buildReviewsSection(),
+              buildHoursSection(),
+              buildContactSection(),
+              buildBookButton(),
               SizedBox(height: 30),
             ]),
           ),
@@ -57,7 +57,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildOverviewSection() {
+  Widget buildOverviewSection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -94,7 +94,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildFacilitiesSection() {
+  Widget buildFacilitiesSection() {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16),
       child: ExpansionTile(
@@ -117,7 +117,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildSafetyFeatures() {
+  Widget buildSafetyFeatures() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -152,7 +152,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildProgramsSection() {
+  Widget buildProgramsSection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -182,7 +182,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildGallerySection() {
+  Widget buildGallerySection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -222,7 +222,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildReviewsSection() {
+  Widget buildReviewsSection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -268,7 +268,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildHoursSection() {
+  Widget buildHoursSection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -287,8 +287,8 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
             ..._buildScheduleTable(),
             ExpansionTile(
               title: Text('View Full Schedule'),
-              initiallyExpanded: _isExpanded,
-              onExpansionChanged: (expanded) => setState(() => _isExpanded = expanded),
+              initiallyExpanded: isExpanded,
+              onExpansionChanged: (expanded) => setState(() => isExpanded = expanded),
               children: [SizedBox.shrink()], // Empty because we're using the expansion for display only
             ),
           ],
@@ -302,7 +302,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
       _buildScheduleRow('Monday - Friday', '7:30 AM - 6:00 PM'),
       _buildScheduleRow('Saturday', '9:00 AM - 4:00 PM'),
       _buildScheduleRow('Sunday', 'Closed'),
-      if(_isExpanded) ...[
+      if(isExpanded) ...[
         _buildScheduleRow('Holidays', 'Special hours apply'),
         _buildScheduleRow('Emergency Care', '24/7 on-call service'),
       ],
@@ -322,7 +322,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildContactSection() {
+  Widget buildContactSection() {
     return Card(
       margin: EdgeInsets.all(16),
       child: Padding(
@@ -372,7 +372,7 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
     );
   }
 
-  Widget _buildBookButton() {
+  Widget buildBookButton() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: ElevatedButton.icon(

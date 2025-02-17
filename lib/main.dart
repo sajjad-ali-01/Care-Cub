@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Care Cub',
-      home: const SplashScreen(), // Use SplashScreen to manage initial navigation
+      home: const SplashScreen(),
     );
   }
 }

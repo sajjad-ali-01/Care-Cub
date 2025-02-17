@@ -3,24 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'Login.dart';
-
-class GoogleAuthClient extends http.BaseClient {
-  final String _accessToken;
-  final http.Client _client = http.Client();
-
-  GoogleAuthClient(this._accessToken);
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    request.headers['Authorization'] = 'Bearer $_accessToken';
-    return _client.send(request);
-  }
-}
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({Key? key}) : super(key: key);
@@ -30,59 +14,107 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ImagePicker _picker = ImagePicker();
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  final GoogleSignIn googleSignIn = GoogleSignIn(
     scopes: ['https://www.googleapis.com/auth/drive.file'],
   );
 
-  late TextEditingController _nameController;
-  late TextEditingController _phoneController;
-  File? _pickedImage;
-  bool _isEditing = false;
-  bool _isUpdating = false;
+  late TextEditingController nameController;
+  late TextEditingController phoneController;
+  late TextEditingController childNameController;
+  late TextEditingController childDobController;
+  File? pickedImage;
+  bool isEditing = false;
+  bool isUpdating = false;
+  DateTime? selectedChildDob;
+  String? childId;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
-    _phoneController = TextEditingController();
+    nameController = TextEditingController();
+    phoneController = TextEditingController();
+    childNameController = TextEditingController();
+    childDobController = TextEditingController();
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserDataStream() {
-    final String? uid = _auth.currentUser?.uid;
+    final String? uid = auth.currentUser?.uid;
     if (uid != null) {
-      return _firestore.collection('users').doc(uid).snapshots();
+      return firestore.collection('users').doc(uid).snapshots();
     }
     throw Exception('User not logged in');
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> getChildDataStream() {
+    final String? uid = auth.currentUser?.uid;
+    if (uid != null) {
+      return firestore
+          .collection('users')
+          .doc(uid)
+          .collection('babyProfiles')
+          .snapshots();
+    }
+    throw Exception('User not logged in');
+  }
 
-  Future<void> _updateProfile() async {
-    final user = _auth.currentUser;
+  Future<void> updateProfile() async {
+    final user = auth.currentUser;
     if (user == null) return;
 
-    setState(() => _isUpdating = true);
+    setState(() => isUpdating = true);
 
     try {
-
-      await _firestore.collection('users').doc(user.uid).update({
-        'name': _nameController.text,
-        'phone': _phoneController.text,
+      await firestore.collection('users').doc(user.uid).update({
+        'name': nameController.text,
+        'phone': phoneController.text,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      if (childId != null) {
+        await firestore
+            .collection('users')
+            .doc(user.uid)
+            .collection('babyProfiles')
+            .doc(childId)
+            .update({
+          'name': childNameController.text,
+          'dateOfBirth': selectedChildDob,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profile and child details updated successfully!')),
+      );
+
       setState(() {
-        _isEditing = false;
-        _pickedImage = null;
+        isEditing = false;
+        pickedImage = null;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Update failed: ${e.toString()}'))
+        SnackBar(content: Text('Update failed: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isUpdating = false);
+      setState(() => isUpdating = false);
+    }
+  }
+
+  Future<void> selectChildDob(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedChildDob ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedChildDob = picked;
+        childDobController.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
     }
   }
 
@@ -91,7 +123,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirm Update'),
-        content: Text('Are you sure you want to update your profile?'),
+        content: Text('Are you sure you want to update your profile and child details?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -100,7 +132,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _updateProfile();
+              updateProfile();
             },
             child: Text('Update'),
           ),
@@ -110,13 +142,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void logout() async {
-    await _auth.signOut();
-    await _googleSignIn.signOut();
+    await auth.signOut();
+    await googleSignIn.signOut();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const Login()),
+          (Route<dynamic> route) => false,
     );
   }
 
@@ -129,18 +162,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         backgroundColor: Colors.deepOrange.shade500,
         actions: [
           IconButton(
-            icon: Icon(_isEditing ? Icons.save : Icons.edit),
+            icon: Icon(isEditing ? Icons.save : Icons.edit),
             onPressed: () {
-              if (_isEditing) {
+              if (isEditing) {
                 ConfirmationDialog();
               } else {
-                setState(() => _isEditing = true);
+                setState(() => isEditing = true);
               }
             },
           )
         ],
+        centerTitle: true,
       ),
-      body: _isUpdating
+      body: isUpdating
           ? Center(child: CircularProgressIndicator())
           : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: getUserDataStream(),
@@ -148,41 +182,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
           final data = snapshot.data!.data() ?? {};
-          if (!_isEditing) {
-            _nameController.text = data['name'] ?? '';
-            _phoneController.text = data['phone'] ?? '';
+          if (!isEditing) {
+            nameController.text = data['name'] ?? '';
+            phoneController.text = data['phone'] ?? '';
           }
 
           return Padding(
             padding: const EdgeInsets.all(20.0),
             child: ListView(
               children: [
+                // User Profile Section
                 GestureDetector(
                   child: Center(
                     child: CircleAvatar(
                       radius: 70,
-                      backgroundImage: _pickedImage != null
-                          ? FileImage(_pickedImage!)
+                      backgroundImage: pickedImage != null
+                          ? FileImage(pickedImage!)
                           : (data['photoUrl'] != null && data['photoUrl'] is String
                           ? NetworkImage(data['photoUrl'])
                           : null),
-                      child: _pickedImage == null && data['photoUrl'] == null
+                      child: pickedImage == null && data['photoUrl'] == null
                           ? Text(
                         data['name']?.isNotEmpty == true
                             ? data['name'][0].toUpperCase()
                             : '?',
                         style: TextStyle(fontSize: 40),
                       )
-
                           : null,
                     ),
                   ),
                 ),
                 SizedBox(height: 20),
                 TextField(
-                  controller: _nameController,
+                  controller: nameController,
                   decoration: InputDecoration(labelText: 'Name'),
-                  enabled: _isEditing,
+                  enabled: isEditing,
                 ),
                 SizedBox(height: 10),
                 TextField(
@@ -192,11 +226,68 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 SizedBox(height: 10),
                 TextField(
-                  controller: _phoneController,
+                  controller: phoneController,
                   decoration: InputDecoration(labelText: 'Phone'),
-                  enabled: _isEditing,
+                  enabled: isEditing,
                   keyboardType: TextInputType.phone,
                 ),
+                SizedBox(height: 20),
+
+                // Child Details Section
+                Text(
+                  'Child Details',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange.shade500,
+                  ),
+                ),
+                SizedBox(height: 10),
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: getChildDataStream(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+
+                    final children = snapshot.data!.docs;
+                    if (children.isEmpty) {
+                      return Text('No child data found.');
+                    }
+
+                    final childData = children.first.data();
+                    childId = children.first.id;
+                    final name = childData['name'] ?? 'No Name';
+                    final dob = childData['dateOfBirth']?.toDate();
+
+                    if (!isEditing) {
+                      childNameController.text = name;
+                      selectedChildDob = dob;
+                      childDobController.text = dob != null
+                          ? "${dob.day}/${dob.month}/${dob.year}"
+                          : '';
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: childNameController,
+                          decoration: InputDecoration(labelText: 'Child Name'),
+                          enabled: isEditing,
+                        ),
+                        SizedBox(height: 10),
+                        TextField(
+                          controller: childDobController,
+                          decoration: InputDecoration(labelText: 'Date of Birth'),
+                          readOnly: true,
+                          onTap: () => selectChildDob(context),
+                        ),
+                        SizedBox(height: 20),
+                      ],
+                    );
+                  },
+                ),
+
+                // Logout Button
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: logout,
@@ -212,12 +303,5 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    super.dispose();
   }
 }

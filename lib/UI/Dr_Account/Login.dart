@@ -1,24 +1,26 @@
-import 'package:carecub/UI/User/Register.dart';
+import 'package:carecub/Logic/Users/ParentsLogic.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/Users/ParentsLogic.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../BottomNavigationBar.dart';
-import 'ForgotPassword.dart';
+import '../Doctor_Booking/Doctor_Side/DoctorHome.dart';
+import '../User/ForgotPassword.dart';
+import 'Register/SignUp.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+
+class DrLogin extends StatefulWidget {
+  const DrLogin({super.key});
 
   @override
-  _LoginState createState() => _LoginState();
+  _DrLoginState createState() => _DrLoginState();
 }
 
-class _LoginState extends State<Login> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+class _DrLoginState extends State<DrLogin> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool isLoading = false;
-  bool isPasswordVisible = false;
+  bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   Future<void> signInUser({
     required String email,
@@ -31,46 +33,56 @@ class _LoginState extends State<Login> {
 
       User? user = userCredential.user;
       if (user != null && user.emailVerified) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
+        // Check user role in Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('Doctors')
+            .doc(user.uid)
+            .get();
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => Tabs()),
-              (Route<dynamic> route) => false,
-        );
+
+        if (userDoc.exists && userDoc['isVerified']==true) {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isDrLoggedIn', true);
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => DoctorDashboard()),
+                (Route<dynamic> route) => false,
+          );
+        } else {
+          // Log the user out if they are not a doctor
+          await FirebaseAuth.instance.signOut();
+          showToast(message: 'You are not authorized to Login here');
+        }
       } else {
+        // Log the user out if email is not verified
         await FirebaseAuth.instance.signOut();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please verify your email first.')),
-        );
+        showToast(message: 'Account not exists');
+
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      showToast(message: 'Wrong Credentials');
+
     }
   }
 
-  void login(BuildContext context) async {
+  void _DrLogin(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        isLoading = true;
+        _isLoading = true;
       });
 
       try {
         await signInUser(
-          email: emailController.text.trim(),
-          password: passwordController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
           context: context,
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.toString()}')),
-        );
+        showToast(message: "Login Failed");
       } finally {
         setState(() {
-          isLoading = false;
+          _isLoading = false;
         });
       }
     }
@@ -99,6 +111,7 @@ class _LoginState extends State<Login> {
                             fontWeight: FontWeight.w900,
                             color: Colors.deepOrange),
                       ),
+                      SizedBox(height: 20),
                       CircleAvatar(
                         radius: 60,
                         backgroundImage:
@@ -106,13 +119,13 @@ class _LoginState extends State<Login> {
                       ),
                       SizedBox(height: 10),
                       Text(
-                        "Login to Your Account",
+                        "Welcome To Doctor's Portal",
                         style: TextStyle(
                             fontSize: 18, color: Colors.grey[800]),
                       ),
                       SizedBox(height: 25),
                       TextFormField(
-                        controller: emailController,
+                        controller: _emailController,
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.email_outlined),
                           hintText: 'Email',
@@ -133,17 +146,17 @@ class _LoginState extends State<Login> {
                       ),
                       SizedBox(height: 20),
                       TextFormField(
-                        controller: passwordController,
-                        obscureText: !isPasswordVisible,
+                        controller: _passwordController,
+                        obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(isPasswordVisible
+                            icon: Icon(_isPasswordVisible
                                 ? Icons.visibility
                                 : Icons.visibility_off),
                             onPressed: () {
                               setState(() {
-                                isPasswordVisible = !isPasswordVisible;
+                                _isPasswordVisible = !_isPasswordVisible;
                               });
                             },
                           ),
@@ -190,9 +203,9 @@ class _LoginState extends State<Login> {
                       ),
                       SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: isLoading
+                        onPressed: _isLoading
                             ? null
-                            : () => login(context), // Disable while loading
+                            : () => _DrLogin(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange,
                           padding: EdgeInsets.symmetric(
@@ -200,7 +213,7 @@ class _LoginState extends State<Login> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: isLoading
+                        child: _isLoading
                             ? CircularProgressIndicator(
                           color: Colors.white,
                         )
@@ -212,59 +225,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              "Or Login With",
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey[600],
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
                       SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              SignInWithGoogle(context);
-                            },
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundImage:
-                              AssetImage('assets/images/google_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () {},
-                            child: CircleAvatar(
-                              radius: 25,
-                              backgroundImage:
-                              AssetImage('assets/images/facebook_logo.png'),
-                              backgroundColor: Colors.transparent,
-                            ),
-                          ),
-                        ],
-                      ),
                       SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +241,7 @@ class _LoginState extends State<Login> {
                               Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => Register()));
+                                      builder: (context) => SignUp()));
                             },
                             child: Text(
                               'Create Account',

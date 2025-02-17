@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DatabaseService {
-  // Save user data
+
   static Future<void> saveUserData({
     required String uid,
     required String name,
@@ -17,11 +17,10 @@ class DatabaseService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      throw e; // Re-throw for error handling in UI
+      throw e;
     }
   }
 
-  // Update user data
   static Future<void> updateUserData({
     required String uid,
     String? name,
@@ -45,7 +44,6 @@ class DatabaseService {
     await userDoc.set(updateData, SetOptions(merge: true));
   }
 
-  // Save doctor data
   static Future<void> saveDrData({
     required String uid,
     required String name,
@@ -65,7 +63,7 @@ class DatabaseService {
         'city': city,
       });
     } catch (e) {
-      throw e; // Re-throw for error handling in UI
+      throw e;
     }
   }
 
@@ -94,8 +92,25 @@ class DatabaseService {
 
     await userDoc.set(updateData, SetOptions(merge: true));
   }
+  static Future<void> AddDrEDU_INFO({
+    required String uid,
+    required String PMCNumber,
+    required List<String> EDU_INFO,
+  }) async {
+    bool isVerified = false;
+    final DocumentReference userDoc = FirebaseFirestore.instance.collection('Doctors').doc(uid);
 
-  // Add educational info for a doctor
+    final Map<String, dynamic> updateData = {
+      'Condition': EDU_INFO,
+      'PMCNumber':PMCNumber,
+      'isVerified' : isVerified,
+
+    };
+
+    await userDoc.set(updateData, SetOptions(merge: true));
+  }
+
+
   static Future<void> AddDrEducationalInfo({
     required String uid,
     String? Edu_Country,
@@ -105,6 +120,7 @@ class DatabaseService {
     String? GraduationYear,
     String? PMCNumber,
   }) async {
+    bool isVerified = false;
     final DocumentReference userDoc = FirebaseFirestore.instance.collection('Doctors').doc(uid);
 
     final DocumentSnapshot userSnapshot = await userDoc.get();
@@ -116,6 +132,7 @@ class DatabaseService {
       'Degree': Degree,
       'GraduationYear': GraduationYear,
       'PMCNumber': PMCNumber,
+      'isVerified' : isVerified,
     };
 
     if (!userSnapshot.exists || !userSnapshot.data().toString().contains('phone')) {
@@ -124,7 +141,6 @@ class DatabaseService {
     await userDoc.set(updateData, SetOptions(merge: true));
   }
 
-  // Fetch all data for a doctor
   static Future<Map<String, dynamic>?> getDrData(String uid) async {
     try {
       DocumentSnapshot doc = await FirebaseFirestore.instance
@@ -142,118 +158,25 @@ class DatabaseService {
     }
   }
 
-  // Fetch specific fields for a doctor
-  static Future<Map<String, dynamic>?> getDoctorSpecificFields(String uid, List<String> fields) async {
+  static Future<void> updateDaycareProfile({
+    required String uid,
+    required String name,
+    required String description,
+    required String license,
+    required String address,
+    required String phone,
+    required String capacity,
+  }) async {
     try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('Doctors')
-          .doc(uid)
-          .get();
-
-      if (doc.exists) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        Map<String, dynamic> result = {};
-
-        for (var field in fields) {
-          if (data.containsKey(field)) {
-            result[field] = data[field];
-          }
-        }
-
-        return result;
-      } else {
-        return null;
-      }
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  // Fetch professional info for a doctor
-  static Future<Map<String, dynamic>?> getDoctorProfessionalInfo(String uid) async {
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('Doctors')
-          .doc(uid)
-          .get();
-
-      if (doc.exists) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        Map<String, dynamic> professionalInfo = {};
-
-        professionalInfo['title'] = data['title'];
-        professionalInfo['experience'] = data['experience'];
-        professionalInfo['Primary_specialization'] = data['Primary_specialization'];
-        professionalInfo['Secondary_specialization'] = data['Secondary_specialization'];
-        professionalInfo['Service_Offered'] = data['Service_Offered'];
-        professionalInfo['Condition'] = data['Condition'];
-
-        return professionalInfo;
-      } else {
-        return null;
-      }
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  // Fetch educational info for a doctor
-  static Future<Map<String, dynamic>?> getDoctorEducationalInfo(String uid) async {
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('Doctors')
-          .doc(uid)
-          .get();
-
-      if (doc.exists) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        Map<String, dynamic> educationalInfo = {};
-
-        educationalInfo['Edu_Country'] = data['Edu_Country'];
-        educationalInfo['Edu_City'] = data['Edu_City'];
-        educationalInfo['College/University'] = data['College/University'];
-        educationalInfo['Degree'] = data['Degree'];
-        educationalInfo['GraduationYear'] = data['GraduationYear'];
-        educationalInfo['PMCNumber'] = data['PMCNumber'];
-
-        return educationalInfo;
-      } else {
-        return null;
-      }
-    } catch (e) {
-      throw e;
-    }
-  }
-
-  // Fetch clinic info for a doctor
-  static Future<List<Map<String, dynamic>>> getDoctorClinics(String uid) async {
-    try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('Doctors')
-          .doc(uid)
-          .collection('clinics')
-          .get();
-
-      List<Map<String, dynamic>> clinics = [];
-
-      for (var doc in querySnapshot.docs) {
-        clinics.add(doc.data() as Map<String, dynamic>);
-      }
-
-      return clinics;
-    } catch (e) {
-      throw e; // Re-throw for error handling in UI
-    }
-  }
-  static Future<List<Map<String, dynamic>>> getDoctorEducation(String uid) async {
-    try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('Doctors')
-          .doc(uid)
-          .collection('education')
-          .get();
-
-      return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      await FirebaseFirestore.instance.collection('DayCare').doc(uid).update({
+        'name': name,
+        'description': description,
+        'license': license,
+        'address': address,
+        'phone': phone,
+        'capacity': capacity,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       throw e;
     }

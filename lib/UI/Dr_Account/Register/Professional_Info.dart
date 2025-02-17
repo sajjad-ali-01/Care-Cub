@@ -12,45 +12,114 @@ class SignUpStep2 extends StatefulWidget {
 
 class _SignUpStep2State extends State<SignUpStep2> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _experienceController;
+  late TextEditingController nameController;
+  late TextEditingController experienceController;
   String? name;
   String? title;
-  String? _selectedTitle;
-  String? _selectedPrimarySpecialization;
-  String? _selectedSecondarySpecialization;
+  String? selectedTitle;
+  String? selectedPrimarySpecialization;
+  String? selectedSecondarySpecialization;
   User? user;
-
-  // Lists for multi-select options
   final List<String> _servicesOptions = [
-    'Consultation', 'Surgery', 'Therapy', 'Rehabilitation', 'Diagnostics',
-  ];
-  final List<String> _conditionsOptions = [
-    'Diabetes', 'Hypertension', 'Asthma', 'Arthritis', 'Cancer',
+    'Consultation',
+    'Surgery',
+    'Therapy',
+    'Rehabilitation',
+    'Diagnostics',
+    'Vaccination',
+    'Growth Monitoring',
+    'Nutritional Counseling',
+    'Developmental Screening',
+    'Behavioral Therapy',
+    'Speech Therapy',
+    'Occupational Therapy',
+    'Neonatal Care',
+    'Pediatric Emergency Care',
+    'Allergy Testing',
+    'Asthma Management',
+    'Child Psychology Services',
+    'Adolescent Health Services',
+    'Chronic Disease Management',
+    'Genetic Counseling',
+    'Hearing and Vision Screening',
+    'Pediatric Dental Care',
+    'Immunization Programs',
+    'Parenting Workshops',
+    'Childhood Obesity Management',
   ];
 
-  // Selected services and conditions
-  List<String> _selectedServices = [];
-  List<String> _selectedConditions = [];
+  final List<String> conditionsOptions = [
+    'Diabetes',
+    'Hypertension',
+    'Asthma',
+    'Arthritis',
+    'Cancer',
+    'Autism Spectrum Disorder',
+    'Attention Deficit Hyperactivity Disorder (ADHD)',
+    'Cerebral Palsy',
+    'Cystic Fibrosis',
+    'Down Syndrome',
+    'Epilepsy',
+    'Food Allergies',
+    'Hearing Loss',
+    'Heart Defects (Congenital)',
+    'Infectious Diseases (e.g., Chickenpox, Measles)',
+    'Juvenile Rheumatoid Arthritis',
+    'Leukemia',
+    'Malnutrition',
+    'Obesity',
+    'Prematurity Complications',
+    'Sickle Cell Anemia',
+    'Speech and Language Disorders',
+    'Thyroid Disorders',
+    'Tuberculosis',
+    'Vision Problems (e.g., Amblyopia, Strabismus)',
+    'Developmental Delays',
+    'Gastrointestinal Disorders (e.g., Crohn’s Disease, Celiac Disease)',
+    'Mental Health Disorders (e.g., Anxiety, Depression)',
+    'Skin Conditions (e.g., Eczema, Psoriasis)',
+    'Respiratory Infections (e.g., Bronchiolitis, Pneumonia)',
+  ];
 
-  final List<String> _specializations = [
-    'Pediatrics', 'Cardiology', 'Dermatology', 'Neurology', 'Orthopedics',
-    'Endocrinology', 'Gastroenterology', 'Pulmonology', 'Psychiatry', 'Oncology',
+  List<String> selectedServices = [];
+  List<String> selectedConditions = [];
+
+  final List<String> specializations = [
+    'General Pediatrics', // Primary care for children
+    'Pediatric Cardiology', // Heart conditions in children
+    'Pediatric Dermatology', // Skin conditions in children
+    'Pediatric Neurology', // Nervous system disorders in children
+    'Pediatric Orthopedics', // Bone and joint issues in children
+    'Pediatric Endocrinology', // Hormonal and growth disorders in children
+    'Pediatric Gastroenterology', // Digestive system disorders in children
+    'Pediatric Pulmonology', // Respiratory conditions in children
+    'Pediatric Psychiatry', // Mental health in children
+    'Pediatric Oncology', // Childhood cancers
+    'Neonatology', // Care for newborns, especially premature or ill infants
+    'Pediatric Allergy and Immunology', // Allergies and immune system disorders
+    'Pediatric Nephrology', // Kidney disorders in children
+    'Pediatric Hematology', // Blood disorders in children
+    'Pediatric Infectious Diseases', // Infectious diseases in children
+    'Pediatric Rheumatology', // Autoimmune and inflammatory conditions in children
+    'Pediatric Emergency Medicine', // Emergency care for children
+    'Pediatric Surgery', // Surgical care for children
+    'Developmental Pediatrics', // Developmental and behavioral issues in children
+    'Pediatric Rehabilitation', // Physical and cognitive rehabilitation for children
   ];
 
   @override
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
-    _nameController = TextEditingController(text: "");
-    _experienceController = TextEditingController();
+    nameController = TextEditingController(text: "");
+    experienceController = TextEditingController();
     fetchDoctorData();
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _experienceController.dispose();
+    nameController.dispose();
+    experienceController.dispose();
     super.dispose();
   }
 
@@ -62,8 +131,8 @@ class _SignUpStep2State extends State<SignUpStep2> {
         setState(() {
           title = doctorData['title'];
           name = doctorData['name'];
-          _selectedTitle = title;
-          _nameController.text = name ?? "";
+          selectedTitle = title;
+          nameController.text = name ?? "";
         });
       }
     } catch (e) {
@@ -97,26 +166,18 @@ class _SignUpStep2State extends State<SignUpStep2> {
     required List<String> selectedOptions,
     required Function(String, bool) onSelected,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: options.map((option) => FilterChip(
-                label: Text(option),
-                selected: selectedOptions.contains(option),
-                onSelected: (selected) => onSelected(option, selected),
-              )).toList(),
-            ),
-          ],
+    return ExpansionTile(
+      title: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      children: [
+        Wrap(
+          spacing: 8,
+          children: options.map((option) => FilterChip(
+            label: Text(option),
+            selected: selectedOptions.contains(option),
+            onSelected: (selected) => onSelected(option, selected),
+          )).toList(),
         ),
-      ),
+      ],
     );
   }
 
@@ -138,25 +199,22 @@ class _SignUpStep2State extends State<SignUpStep2> {
               const Text("Confirm Your Details", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
 
-              // Title Dropdown
               _buildDropdownField(
                 label: 'Title',
                 items: ['Dr.', 'Prof.', 'Assist. Prof.', 'Assoc. Prof.'],
-                value: _selectedTitle,
-                onChanged: (value) => setState(() => _selectedTitle = value),
+                value: selectedTitle,
+                onChanged: (value) => setState(() => selectedTitle = value),
               ),
 
-              // Name Field
               TextFormField(
-                controller: _nameController,
+                controller: nameController,
                 decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? 'Please enter your name' : null,
               ),
               const SizedBox(height: 20),
 
-              // Experience Field
               TextFormField(
-                controller: _experienceController,
+                controller: experienceController,
                 decoration: const InputDecoration(labelText: "Years of Experience", hintText: "1 year", border: OutlineInputBorder()),
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Enter years of experience";
@@ -165,49 +223,45 @@ class _SignUpStep2State extends State<SignUpStep2> {
               ),
               const SizedBox(height: 20),
 
-              // Primary Specialization Dropdown
               _buildDropdownField(
                 label: 'Primary Specialization',
-                items: _specializations,
-                value: _selectedPrimarySpecialization,
-                onChanged: (value) => setState(() => _selectedPrimarySpecialization = value),
+                items: specializations,
+                value: selectedPrimarySpecialization,
+                onChanged: (value) => setState(() => selectedPrimarySpecialization = value),
               ),
 
-              // Secondary Specialization Dropdown
               _buildDropdownField(
                 label: 'Secondary Specialization',
-                items: _specializations,
-                value: _selectedSecondarySpecialization,
-                onChanged: (value) => setState(() => _selectedSecondarySpecialization = value),
+                items: specializations,
+                value: selectedSecondarySpecialization,
+                onChanged: (value) => setState(() => selectedSecondarySpecialization = value),
               ),
 
-              // Services Offered (Multi-Select)
               _buildMultiSelectSection(
                 title: 'Services Offered',
                 options: _servicesOptions,
-                selectedOptions: _selectedServices,
+                selectedOptions: selectedServices,
                 onSelected: (option, selected) {
                   setState(() {
                     if (selected) {
-                      _selectedServices.add(option);
+                      selectedServices.add(option);
                     } else {
-                      _selectedServices.remove(option);
+                      selectedServices.remove(option);
                     }
                   });
                 },
               ),
 
-              // Conditions Treated (Multi-Select)
               _buildMultiSelectSection(
                 title: 'Conditions Treated',
-                options: _conditionsOptions,
-                selectedOptions: _selectedConditions,
+                options: conditionsOptions,
+                selectedOptions: selectedConditions,
                 onSelected: (option, selected) {
                   setState(() {
                     if (selected) {
-                      _selectedConditions.add(option);
+                      selectedConditions.add(option);
                     } else {
-                      _selectedConditions.remove(option);
+                      selectedConditions.remove(option);
                     }
                   });
                 },
@@ -215,20 +269,19 @@ class _SignUpStep2State extends State<SignUpStep2> {
 
               const SizedBox(height: 30),
 
-              // Next Button
               Center(
                 child: ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       DatabaseService.AddDrProfessional_Info(
                         uid: user!.uid,
-                        name: _nameController.text,
-                        title: _selectedTitle ?? '',
-                        experience: _experienceController.text,
-                        Primary_specialization: _selectedPrimarySpecialization ?? '',
-                        Secondary_specialization: _selectedSecondarySpecialization ?? '',
-                        Service_Offered: _selectedServices, // Save as List<String>
-                        Condition: _selectedConditions, // Save as List<String>
+                        name: nameController.text,
+                        title: selectedTitle ?? '',
+                        experience: experienceController.text,
+                        Primary_specialization: selectedPrimarySpecialization ?? '',
+                        Secondary_specialization: selectedSecondarySpecialization ?? '',
+                        Service_Offered: selectedServices,
+                        Condition: selectedConditions,
                       );
                       Navigator.push(
                         context,

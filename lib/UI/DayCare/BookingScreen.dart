@@ -36,7 +36,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
     '5:00 PM',
   ];
 
-  void _selectDate() async {
+  void selectDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -65,12 +65,11 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Daycare Information Card
             Card(
               color: Colors.white,
               elevation: 5,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(15)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -151,7 +150,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 15),
 
             // Booking Form
             TextField(
@@ -162,7 +161,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 prefixIcon: Icon(Icons.child_care),
               ),
             ),
-            SizedBox(height: 15),
+            SizedBox(height: 10),
 
             DropdownButtonFormField<String>(
               value: selectedGender,
@@ -176,10 +175,10 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
               decoration: InputDecoration(
                 labelText: "Child's Gender",
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.transgender),
+                prefixIcon: Icon(Icons.person),
               ),
             ),
-            SizedBox(height: 15),
+            SizedBox(height: 10),
 
             TextField(
               controller: contactController,
@@ -190,10 +189,10 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 prefixIcon: Icon(Icons.phone),
               ),
             ),
-            SizedBox(height: 15),
+            SizedBox(height: 10),
 
             GestureDetector(
-              onTap: _selectDate,
+              onTap: selectDate,
               child: AbsorbPointer(
                 child: TextField(
                   controller: dateController,
@@ -205,8 +204,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 20),
-
+            SizedBox(height: 10),
             Text(
               "Preferred Drop-off Time:",
               style: TextStyle(
@@ -214,7 +212,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 5),
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -231,7 +229,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 );
               }).toList(),
             ),
-            SizedBox(height: 30),
+            SizedBox(height: 15),
 
             // Booking Button
             SizedBox(
@@ -244,7 +242,7 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange.shade400,
-                  padding: EdgeInsets.symmetric(vertical: 15),
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -318,4 +316,5 @@ class _DaycareBookingScreenState extends State<DaycareBookingScreen> {
       ),
     );
   }
+
 }

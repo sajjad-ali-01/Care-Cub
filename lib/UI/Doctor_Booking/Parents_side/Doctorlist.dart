@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../Database/DatabaseServices.dart';
-import '../Doctor/BookingScreen.dart';
+import '../../../Database/DataBaseReadServices.dart';
+import '../../../Database/DatabaseServices.dart';
+import 'BookingScreen.dart';
 import 'Doctor details.dart';
 import 'MyBookings.dart';
 
@@ -25,7 +26,6 @@ class _DoctorListState extends State<Doctorlist> {
       appBar: AppBar(
         backgroundColor: Colors.deepOrange.shade400,
         elevation: 1,
-        //automaticallyImplyLeading: false,
         leading: isSearching
             ? null
             : IconButton(
@@ -137,12 +137,12 @@ class _DoctorListState extends State<Doctorlist> {
                           secondary_specialization: data['Secondary_specialization'] ?? 'No Secondary Specialization',
                           qualification: data['Degree'] ?? 'No Qualification',
                           experience: data['experience'] ?? 'No Experience',
-                          rating: '98% (350 Satisfied)', // Placeholder, replace with actual data if available
-                          fee: 'Rs. 1,800', // Placeholder, replace with actual data if available
+                          rating: '98% (350 Satisfied)',
+                          fee: '1800',
                           image: data['photoUrl'] ?? 'assets/images/doctor.jpg',
                           uid: doc.id,
-                          services: List<String>.from(data['Service_Offered'] ?? []), // Fetch services
-                          conditions: List<String>.from(data['Condition'] ?? []), // Fetch conditions
+                          services: List<String>.from(data['Service_Offered'] ?? []),
+                          conditions: List<String>.from(data['Condition'] ?? []),
                         );
                       }).toList(),
                     );
@@ -168,8 +168,8 @@ class DoctorCard extends StatefulWidget {
   final String fee;
   final String image;
   final String uid;
-  final List<String> services; // Add services
-  final List<String> conditions; // Add conditions
+  final List<String> services;
+  final List<String> conditions;
 
 
   DoctorCard({
@@ -183,7 +183,7 @@ class DoctorCard extends StatefulWidget {
     required this.title,
     required this.secondary_specialization,
     required this.uid,
-    required this.services, // Add services
+    required this.services,
     required this.conditions,
   });
 
@@ -192,8 +192,8 @@ class DoctorCard extends StatefulWidget {
 }
 
 class _DoctorCardState extends State<DoctorCard> {
-  List<Map<String, dynamic>> clinics = []; // List to store clinics
-  bool isLoading = true; // Track loading state
+  List<Map<String, dynamic>> clinics = [];
+  bool isLoading = true;
   String dataRowToString(DataRow row) {
     return row.cells.map((cell) => (cell.child as Text).data).join(", ");
   }
@@ -201,22 +201,20 @@ class _DoctorCardState extends State<DoctorCard> {
   @override
   void initState() {
     super.initState();
-    fetchClinics(); // Fetch clinics when the widget initializes
+    fetchClinics();
   }
-
-  // Fetch clinics from Firestore
   Future<void> fetchClinics() async {
     try {
       List<Map<String, dynamic>> fetchedClinics =
-      await DatabaseService.getDoctorClinics(widget.uid);
+      await DataBaseReadServices.getDoctorClinics(widget.uid);
       setState(() {
         clinics = fetchedClinics;
-        isLoading = false; // Update loading state
+        isLoading = false;
       });
     } catch (e) {
       print("Error fetching clinics: $e");
       setState(() {
-        isLoading = false; // Update loading state even if there's an error
+        isLoading = false;
       });
     }
   }
@@ -240,7 +238,7 @@ class _DoctorCardState extends State<DoctorCard> {
                 'fee': widget.fee,
                 'image': widget.image,
                 'uid': widget.uid,
-                'services': widget.services, // Pass services
+                'services': widget.services,
                 'conditions': widget.conditions,
                 'Address':clinics[0]['Address'],
               },
@@ -297,12 +295,9 @@ class _DoctorCardState extends State<DoctorCard> {
                     final availability = clinic['Availability'] as Map<String, dynamic>? ?? {};
                     final now = DateTime.now();
 
-                    // Get today and tomorrow's availability
-                    final todayDay = _getDayName(now.weekday);
+                    final todayDay = getDayName(now.weekday);
 
-                    // Create default rows for today and tomorrow
-                    final DataRow todayRow = _buildAvailabilityRow('Today', todayDay, availability);
-                    // Convert todayRow to String
+                    final DataRow todayRow = buildAvailabilityRow('Today', todayDay, availability);
                     String todayRowString = dataRowToString(todayRow);
                     print(todayRowString);
                     return Container(
@@ -327,7 +322,7 @@ class _DoctorCardState extends State<DoctorCard> {
                               Icon(Icons.local_hospital_sharp, color: Colors.deepOrange, size: 20),
                               SizedBox(width: 8),
                               Text(
-                                clinic['ClinicName'], // Use the parsed hospital name
+                                clinic['ClinicName'],
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 14,
@@ -341,7 +336,7 @@ class _DoctorCardState extends State<DoctorCard> {
                               Icon(Icons.location_on, color: Colors.blue, size: 15),
                               SizedBox(width: 8),
                               Text(
-                                clinic['Address'], // Use the parsed hospital nam
+                                clinic['Address'],
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 13,
@@ -367,7 +362,7 @@ class _DoctorCardState extends State<DoctorCard> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Fee: Rs. ${clinic['Fees']}', // Use the parsed hospital price
+                                'Fee: Rs. ${clinic['Fees']}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -397,9 +392,9 @@ class _DoctorCardState extends State<DoctorCard> {
                   ElevatedButton.icon(
                     onPressed: () {
                       if (clinics.length > 1) {
-                        _showHospitalSelection(context);
+                        showHospitalSelection(context);
                       } else {
-                        // Directly navigate if only one hospital
+
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -436,7 +431,7 @@ class _DoctorCardState extends State<DoctorCard> {
     );
   }
 
-  void _showHospitalSelection(BuildContext context) {
+  void showHospitalSelection(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -535,7 +530,7 @@ class _DoctorCardState extends State<DoctorCard> {
     );
   }
 
-  String _getDayName(int weekday) {
+  String getDayName(int weekday) {
     switch (weekday) {
       case 1: return 'Monday';
       case 2: return 'Tuesday';
@@ -548,7 +543,7 @@ class _DoctorCardState extends State<DoctorCard> {
     }
   }
 
-  DataRow _buildAvailabilityRow(String label, String day, Map<String, dynamic> availability) {
+  DataRow buildAvailabilityRow(String label, String day, Map<String, dynamic> availability) {
     final timings = availability[day];
     return DataRow(
       cells: [

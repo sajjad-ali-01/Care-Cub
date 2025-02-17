@@ -1,7 +1,6 @@
 import 'package:carecub/UI/User/Login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../Database/DatabaseServices.dart';
 import '../../Logic/Users/ParentsLogic.dart';
 import 'EmailVerificationScreen.dart';
 
@@ -15,20 +14,20 @@ class Register extends StatefulWidget {
 
 class _RegisterState extends State<Register> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false; // Add this to track loading state
-  Future<void> _registerUser({
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
+  bool isLoading = false;
+  Future<void> registerUser({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
 
     try {
       final User? user = await BackendService.registerUser(email, password);
@@ -46,9 +45,9 @@ class _RegisterState extends State<Register> {
           context,
           MaterialPageRoute(
             builder: (context) => EmailVerificationScreen(
-              name: _nameController.text.trim(),
+              name: nameController.text.trim(),
               email: email,
-              phone: _phoneController.text.trim(),
+              phone: phoneController.text.trim(),
               user: user,
               password: password,
             ),
@@ -60,7 +59,7 @@ class _RegisterState extends State<Register> {
         SnackBar(content: Text('Error: ${e.toString()}')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => isLoading = false);
     }
   }
   @override
@@ -87,7 +86,7 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 25),
                   TextFormField(
-                    controller: _nameController,
+                    controller: nameController,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.person_outline),
                       hintText: 'Name',
@@ -104,7 +103,7 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 15),
                   TextFormField(
-                    controller: _emailController,
+                    controller: emailController,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.email_outlined),
                       hintText: 'Email',
@@ -125,7 +124,7 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 15),
                   TextFormField(
-                    controller: _phoneController,
+                    controller: phoneController,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.phone_outlined),
                       hintText: 'Phone',
@@ -145,19 +144,19 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 15),
                   TextFormField(
-                    controller: _passwordController,
-                    obscureText: !_isPasswordVisible, // Toggle visibility
+                    controller: passwordController,
+                    obscureText: !isPasswordVisible,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible
+                          isPasswordVisible
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                         ),
                         onPressed: () {
                           setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
+                            isPasswordVisible = !isPasswordVisible;
                           });
                         },
                       ),
@@ -178,19 +177,19 @@ class _RegisterState extends State<Register> {
                   ),
                   SizedBox(height: 15),
                   TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: !_isConfirmPasswordVisible, // Toggle visibility
+                      controller: confirmPasswordController,
+                      obscureText: !isConfirmPasswordVisible,
                       decoration: InputDecoration(
                         prefixIcon: Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _isConfirmPasswordVisible
+                            isConfirmPasswordVisible
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                           ),
                           onPressed: () {
                             setState(() {
-                              _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                              isConfirmPasswordVisible = !isConfirmPasswordVisible;
                             });
                           },
                         ),
@@ -203,22 +202,22 @@ class _RegisterState extends State<Register> {
                         if (value == null || value.isEmpty) {
                           return 'Confirm Password cannot be empty';
                         }
-                        if (value != _passwordController.text) {
+                        if (value != passwordController.text) {
                           return 'Passwords do not match';
                         }
                         return null;
                       }
                   ),
                   SizedBox(height: 20),
-                  _isLoading
-                      ? CircularProgressIndicator() // Show the loading indicator
+                  isLoading
+                      ? CircularProgressIndicator()
                       : ElevatedButton(
                     onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        await _registerUser(
-                          email: _emailController.text.trim(),
-                          password: _passwordController.text.trim(),
-                          context: context, // Pass context here
+                        await registerUser(
+                          email: emailController.text.trim(),
+                          password: passwordController.text.trim(),
+                          context: context,
                         );
                       }
                     },

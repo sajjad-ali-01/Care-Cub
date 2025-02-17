@@ -1,4 +1,10 @@
+import 'package:carecub/UI/DayCare_Account/Login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../Database/DataBaseReadServices.dart';
+import '../../Logic/Users/ParentsLogic.dart';
+import 'EmailVerificationScreen.dart';
 
 class DaycareRegistrationScreen extends StatefulWidget {
   @override
@@ -7,24 +13,28 @@ class DaycareRegistrationScreen extends StatefulWidget {
 
 class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final List<Map<String, dynamic>> _programs = [];
-  final List<String> _selectedFacilities = [];
-  final List<String> _selectedSafetyFeatures = [];
+  final List<Map<String, dynamic>> programs = [];
+  final List<String> selectedFacilities = [];
+  final List<String> selectedSafetyFeatures = [];
 
-  // Controllers
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _licenseController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _capacityController = TextEditingController();
-  TimeOfDay _openingTime = TimeOfDay(hour: 7, minute: 30);
-  TimeOfDay _closingTime = TimeOfDay(hour: 18, minute: 0);
-  int _minAge = 2;
-  int _maxAge = 5;
+  final nameController = TextEditingController();
+  final descriptionController = TextEditingController();
+  final licenseController = TextEditingController();
+  final addressController = TextEditingController();
+  final phoneController = TextEditingController();
+  final emailController = TextEditingController();
+  final capacityController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
-  bool _is24Hours = false;
+  TimeOfDay openingTime = TimeOfDay(hour: 7, minute: 30);
+  TimeOfDay closingTime = TimeOfDay(hour: 18, minute: 0);
+  int minAge = 2;
+  int maxAge = 5;
+
+  bool isLoading = false;
+  late final daycareData;
+  bool is24Hours = false;
   final List<String> _daysOfWeek = [
     'Monday',
     'Tuesday',
@@ -34,19 +44,57 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     'Saturday',
     'Sunday'
   ];
-  List<String> _selectedDays = [];
-
+  List<String> selectedDays = [];
 
   // Predefined options
-  final List<String> _facilityOptions = [
+  final List<String> facilityOptions = [
     'Indoor Play Area', 'Outdoor Playground', 'Nap Rooms',
     'Learning Center', 'Kitchen', 'Security Cameras'
   ];
 
-  final List<String> _safetyOptions = [
+  final List<String> safetyOptions = [
     'First Aid Certified Staff', 'Secure Entry System',
     'Fire Safety System', 'Emergency Drills', 'CPR Trained Staff'
   ];
+  Future<void> registerUser({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    setState(() => isLoading = true);
+
+    try {
+      final User? user = await BackendService.registerUser(email, password);
+      if (user != null) {
+        await BackendService.sendVerificationEmail(user);
+        showToast(message: "Verification email sent to $email. Please verify your email.");
+
+        await DataBaseReadServices.SaveDayCareData(
+          uid: user.uid,
+          daycareData: daycareData,
+
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(
+              email: email,
+              user: user,
+              password: password,
+            ),
+          ),
+              (Route<dynamic> route) => false,
+
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +110,19 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildBasicInfoSection(),
-              _buildAgeRangeSection(),
-              _buildOperatingHoursSection(),
-              _buildCapacitySection(),
-              _buildFacilitiesSection(),
-              _buildSafetyFeaturesSection(),
-              _buildProgramsSection(),
-              _buildContactInfoSection(),
-              _buildLicenseSection(),
+              buildBasicInfoSection(),
+              buildAgeRangeSection(),
+              buildOperatingHoursSection(),
+              buildCapacitySection(),
+              buildFacilitiesSection(),
+              buildSafetyFeaturesSection(),
+              buildProgramsSection(),
+              buildContactInfoSection(),
+              buildLicenseSection(),
+              buildPasswordSection(),
               SizedBox(height: 20),
-              _buildSubmitButton(),
+              buildSubmitButton(),
+              buildLoginLink(),
             ],
           ),
         ),
@@ -80,7 +130,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildBasicInfoSection() {
+  Widget buildBasicInfoSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -91,12 +141,12 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
             Text('Basic Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
             TextFormField(
-              controller: _nameController,
+              controller: nameController,
               decoration: InputDecoration(labelText: 'Daycare Name', prefixIcon: Icon(Icons.business)),
               validator: (value) => value!.isEmpty ? 'Required field' : null,
             ),
             TextFormField(
-              controller: _descriptionController,
+              controller: descriptionController,
               decoration: InputDecoration(labelText: 'Description', prefixIcon: Icon(Icons.description)),
               maxLines: 3,
               validator: (value) => value!.isEmpty ? 'Required field' : null,
@@ -107,7 +157,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildAgeRangeSection() {
+  Widget buildAgeRangeSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -121,20 +171,20 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _minAge,
+                    value: minAge,
                     items: List.generate(12, (index) => index + 1)
-                        .map((age) => DropdownMenuItem(value: age, child: Text('$age years'))).toList(),
-                    onChanged: (value) => setState(() => _minAge = value!),
+                        .map((age) => DropdownMenuItem(value: age - 1, child: Text('${age - 1} years'))).toList(),
+                    onChanged: (value) => setState(() => minAge = value!),
                     decoration: InputDecoration(labelText: 'Minimum Age'),
                   ),
                 ),
                 SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _maxAge,
+                    value: maxAge,
                     items: List.generate(12, (index) => index + 1)
                         .map((age) => DropdownMenuItem(value: age, child: Text('$age years'))).toList(),
-                    onChanged: (value) => setState(() => _maxAge = value!),
+                    onChanged: (value) => setState(() => maxAge = value!),
                     decoration: InputDecoration(labelText: 'Maximum Age'),
                   ),
                 ),
@@ -146,7 +196,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildOperatingHoursSection() {
+  Widget buildOperatingHoursSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -158,37 +208,37 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
             SizedBox(height: 16),
             CheckboxListTile(
               title: Text('Open 24 Hours'),
-              value: _is24Hours,
-              onChanged: (value) => setState(() => _is24Hours = value!),
+              value: is24Hours,
+              onChanged: (value) => setState(() => is24Hours = value!),
             ),
-            if (!_is24Hours) ...[
+            if (!is24Hours) ...[
               Row(
                 children: [
                   Expanded(
                     child: ListTile(
                       title: Text('Opening Time'),
-                      subtitle: Text(_openingTime.format(context)),
+                      subtitle: Text(openingTime.format(context)),
                       trailing: Icon(Icons.access_time),
                       onTap: () async {
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: _openingTime,
+                          initialTime: openingTime,
                         );
-                        if (time != null) setState(() => _openingTime = time);
+                        if (time != null) setState(() => openingTime = time);
                       },
                     ),
                   ),
                   Expanded(
                     child: ListTile(
                       title: Text('Closing Time'),
-                      subtitle: Text(_closingTime.format(context)),
+                      subtitle: Text(closingTime.format(context)),
                       trailing: Icon(Icons.access_time),
                       onTap: () async {
                         final time = await showTimePicker(
                           context: context,
-                          initialTime: _closingTime,
+                          initialTime: closingTime,
                         );
-                        if (time != null) setState(() => _closingTime = time);
+                        if (time != null) setState(() => closingTime = time);
                       },
                     ),
                   ),
@@ -202,17 +252,17 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
               spacing: 8,
               children: _daysOfWeek.map((day) => FilterChip(
                 label: Text(day),
-                selected: _selectedDays.contains(day),
+                selected: selectedDays.contains(day),
                 onSelected: (selected) => setState(() {
                   if (selected) {
-                    _selectedDays.add(day);
+                    selectedDays.add(day);
                   } else {
-                    _selectedDays.remove(day);
+                    selectedDays.remove(day);
                   }
                 }),
               )).toList(),
             ),
-            if (_selectedDays.isEmpty)
+            if (selectedDays.isEmpty)
               Text('Please select at least one day', style: TextStyle(color: Colors.red)),
           ],
         ),
@@ -220,7 +270,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildCapacitySection() {
+  Widget buildCapacitySection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -230,7 +280,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           children: [
             Text('Capacity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextFormField(
-              controller: _capacityController,
+              controller: capacityController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'Maximum Children Capacity',
@@ -244,7 +294,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildFacilitiesSection() {
+  Widget buildFacilitiesSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -255,14 +305,14 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
             Text('Facilities', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
-              children: _facilityOptions.map((facility) => FilterChip(
+              children: facilityOptions.map((facility) => FilterChip(
                 label: Text(facility),
-                selected: _selectedFacilities.contains(facility),
+                selected: selectedFacilities.contains(facility),
                 onSelected: (selected) => setState(() {
                   if (selected) {
-                    _selectedFacilities.add(facility);
+                    selectedFacilities.add(facility);
                   } else {
-                    _selectedFacilities.remove(facility);
+                    selectedFacilities.remove(facility);
                   }
                 }),
               )).toList(),
@@ -273,7 +323,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildSafetyFeaturesSection() {
+  Widget buildSafetyFeaturesSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -284,14 +334,14 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
             Text('Safety Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
-              children: _safetyOptions.map((safety) => FilterChip(
+              children: safetyOptions.map((safety) => FilterChip(
                 label: Text(safety),
-                selected: _selectedSafetyFeatures.contains(safety),
+                selected: selectedSafetyFeatures.contains(safety),
                 onSelected: (selected) => setState(() {
                   if (selected) {
-                    _selectedSafetyFeatures.add(safety);
+                    selectedSafetyFeatures.add(safety);
                   } else {
-                    _selectedSafetyFeatures.remove(safety);
+                    selectedSafetyFeatures.remove(safety);
                   }
                 }),
               )).toList(),
@@ -302,7 +352,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildProgramsSection() {
+  Widget buildProgramsSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -316,27 +366,27 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
                 Text('Programs Offered', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: Icon(Icons.add),
-                  onPressed: () => setState(() => _programs.add({'name': '', 'ageRange': '', 'description': ''})),
+                  onPressed: () => setState(() => programs.add({'name': '', 'ageRange': '', 'description': ''})),
                 ),
               ],
             ),
             ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: _programs.length,
+              itemCount: programs.length,
               itemBuilder: (context, index) => Column(
                 children: [
                   TextFormField(
                     decoration: InputDecoration(labelText: 'Program Name'),
-                    onChanged: (value) => _programs[index]['name'] = value,
+                    onChanged: (value) => programs[index]['name'] = value,
                   ),
                   TextFormField(
                     decoration: InputDecoration(labelText: 'Age Range'),
-                    onChanged: (value) => _programs[index]['ageRange'] = value,
+                    onChanged: (value) => programs[index]['ageRange'] = value,
                   ),
                   TextFormField(
                     decoration: InputDecoration(labelText: 'Description'),
-                    onChanged: (value) => _programs[index]['description'] = value,
+                    onChanged: (value) => programs[index]['description'] = value,
                     maxLines: 2,
                   ),
                   Divider(),
@@ -349,7 +399,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildContactInfoSection() {
+  Widget buildContactInfoSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -359,18 +409,18 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           children: [
             Text('Contact Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextFormField(
-              controller: _addressController,
+              controller: addressController,
               decoration: InputDecoration(labelText: 'Address', prefixIcon: Icon(Icons.location_on)),
               validator: (value) => value!.isEmpty ? 'Required field' : null,
             ),
             TextFormField(
-              controller: _phoneController,
+              controller: phoneController,
               decoration: InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone)),
               keyboardType: TextInputType.phone,
               validator: (value) => value!.isEmpty ? 'Required field' : null,
             ),
             TextFormField(
-              controller: _emailController,
+              controller: emailController,
               decoration: InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email)),
               keyboardType: TextInputType.emailAddress,
               validator: (value) => value!.isEmpty ? 'Required field' : null,
@@ -381,7 +431,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildLicenseSection() {
+  Widget buildLicenseSection() {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -391,7 +441,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           children: [
             Text('License Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextFormField(
-              controller: _licenseController,
+              controller: licenseController,
               decoration: InputDecoration(
                 labelText: 'License Number',
                 prefixIcon: Icon(Icons.assignment),
@@ -404,7 +454,49 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget buildPasswordSection() {
+    return Card(
+      margin: EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            TextFormField(
+              controller: passwordController,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: Icon(Icons.lock),
+              ),
+              obscureText: true,
+              validator: (value) {
+                if (value!.isEmpty) return 'Required field';
+                if (value.length < 6) return 'Password must be at least 6 characters';
+                return null;
+              },
+            ),
+            SizedBox(height: 16),
+            TextFormField(
+              controller: confirmPasswordController,
+              decoration: InputDecoration(
+                labelText: 'Confirm Password',
+                prefixIcon: Icon(Icons.lock),
+              ),
+              obscureText: true,
+              validator: (value) {
+                if (value!.isEmpty) return 'Required field';
+                if (value != passwordController.text) return 'Passwords do not match';
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -413,39 +505,85 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           padding: EdgeInsets.symmetric(vertical: 16),
         ),
         child: Text('Submit Registration', style: TextStyle(fontSize: 18)),
-        onPressed: () {
+        onPressed: () async {
           if (_formKey.currentState!.validate()) {
-            final daycareData = {
-              'name': _nameController.text,
-              'description': _descriptionController.text,
-              'ageRange': '$_minAge-$_maxAge years',
-              'hours': '${_openingTime.format(context)} - ${_closingTime.format(context)}',
-              'capacity': _capacityController.text,
-              'facilities': _selectedFacilities,
-              'safetyFeatures': _selectedSafetyFeatures,
-              'programs': _programs,
-              'address': _addressController.text,
-              'phone': _phoneController.text,
-              'email': _emailController.text,
-              'license': _licenseController.text,
+            if (passwordController.text != confirmPasswordController.text) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Passwords do not match')),
+              );
+              return;
+            }
+
+            bool isVerified = false;
+            daycareData = {
+              'name': nameController.text,
+              'description': descriptionController.text,
+              'ageRange': '$minAge-$maxAge years',
+              'hours': is24Hours
+                  ? '24 Hours'
+                  : '${openingTime.format(context)} - ${closingTime.format(context)}',
+              'operatingDays': selectedDays,
+              'capacity': capacityController.text,
+              'facilities': selectedFacilities,
+              'safetyFeatures': selectedSafetyFeatures,
+              'programs': programs,
+              'address': addressController.text,
+              'phone': phoneController.text,
+              'email': emailController.text,
+              'license': licenseController.text,
+              'createdAt': FieldValue.serverTimestamp(),
+              'isVerified': isVerified,
             };
-            // Handle submission logic here
-            print(daycareData);
+
+            try {
+
+              await registerUser(
+
+                email: emailController.text,
+                password: passwordController.text,
+                context: context,
+              );
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Daycare registration submitted successfully!')),
+              );
+
+              _formKey.currentState!.reset();
+              setState(() {
+                selectedFacilities.clear();
+                selectedSafetyFeatures.clear();
+                programs.clear();
+                selectedDays.clear();
+                is24Hours = false;
+                openingTime = TimeOfDay(hour: 7, minute: 30);
+                closingTime = TimeOfDay(hour: 18, minute: 0);
+                minAge = 2;
+                maxAge = 5;
+              });
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to submit registration')),
+              );
+            }
+          }else{
+            showToast(message: "Please fill out all fields");
           }
         },
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _licenseController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _capacityController.dispose();
-    super.dispose();
+  Widget buildLoginLink() {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DayCareLogin()),
+          );
+        },
+        child: Text('Already have an account? Login', style: TextStyle(color: Colors.deepOrange)),
+      ),
+    );
   }
 }

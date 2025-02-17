@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../Home.dart';
+import 'ThankyouScreen.dart';
 
 class AddClinicScreen extends StatefulWidget {
   @override
@@ -10,18 +10,15 @@ class AddClinicScreen extends StatefulWidget {
 
 class _AddClinicScreenState extends State<AddClinicScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _clinicNameController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _FeeController = TextEditingController();
-  bool _isLoading = false;
+  final TextEditingController clinicNameController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+  final TextEditingController cityController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
+  final TextEditingController FeeController = TextEditingController();
+  bool isLoading = false;
 
-  // TimeOfDay _openingTime = TimeOfDay(hour: 9, minute: 0);
-  // TimeOfDay _closingTime = TimeOfDay(hour: 17, minute: 0);
 
-  // List of days for availability
-  final List<String> _daysOfWeek = [
+  final List<String> daysOfWeek = [
     'Monday',
     'Tuesday',
     'Wednesday',
@@ -31,8 +28,7 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
     'Sunday',
   ];
 
-  // Track selected days and their timings
-  final Map<String, Map<String, dynamic>> _selectedDays = {
+  final Map<String, Map<String, dynamic>> selectedDays = {
     'Monday': {'start': TimeOfDay(hour: 9, minute: 0), 'end': TimeOfDay(hour: 17, minute: 0), 'isSelected': false},
     'Tuesday': {'start': TimeOfDay(hour: 9, minute: 0), 'end': TimeOfDay(hour: 17, minute: 0), 'isSelected': false},
     'Wednesday': {'start': TimeOfDay(hour: 9, minute: 0), 'end': TimeOfDay(hour: 17, minute: 0), 'isSelected': false},
@@ -42,33 +38,32 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
     'Sunday': {'start': TimeOfDay(hour: 9, minute: 0), 'end': TimeOfDay(hour: 17, minute: 0), 'isSelected': false},
   };
 
-  Future<void> _selectTime(BuildContext context, String day, bool isStartTime) async {
+  Future<void> selectTime(BuildContext context, String day, bool isStartTime) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: isStartTime ? _selectedDays[day]!['start']! : _selectedDays[day]!['end']!,
+      initialTime: isStartTime ? selectedDays[day]!['start']! : selectedDays[day]!['end']!,
     );
     if (picked != null) {
       setState(() {
         if (isStartTime) {
-          _selectedDays[day]!['start'] = picked;
+          selectedDays[day]!['start'] = picked;
         } else {
-          _selectedDays[day]!['end'] = picked;
+          selectedDays[day]!['end'] = picked;
         }
       });
     }
   }
 
-  // Toggle day selection
-  void _toggleDaySelection(String day) {
+  void toggleDaySelection(String day) {
     setState(() {
-      _selectedDays[day]!['isSelected'] = !_selectedDays[day]!['isSelected']!;
+      selectedDays[day]!['isSelected'] = !selectedDays[day]!['isSelected']!;
     });
   }
 
-  void _saveClinicInfo() async {
+  void saveClinicInfo() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
-        _isLoading = true; // Start loading
+        isLoading = true;
       });
 
       final User? user = FirebaseAuth.instance.currentUser;
@@ -77,15 +72,14 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
           SnackBar(content: Text("User not logged in!")),
         );
         setState(() {
-          _isLoading = false; // Stop loading
+          isLoading = false;
         });
         return;
       }
 
       try {
-        // Get the selected days and their timings
         final Map<String, Map<String, String>> availability = {};
-        _selectedDays.forEach((day, timings) {
+        selectedDays.forEach((day, timings) {
           if (timings['isSelected']!) {
             availability[day] = {
               'start': timings['start']!.format(context),
@@ -99,26 +93,25 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
             .doc(user.uid)
             .collection('clinics')
             .add({
-          'ClinicName': _clinicNameController.text,
-          'ClinicCity': _cityController.text,
-          'Address': _addressController.text,
-          'Location': _locationController.text,
+          'ClinicName': clinicNameController.text,
+          'ClinicCity': cityController.text,
+          'Address': addressController.text,
+          'Location': locationController.text,
           'Availability': availability,
-          'Fees': _FeeController.text,
+          'Fees': FeeController.text,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Clinic Info Saved Successfully!")),
         );
 
-        // Clear the form
-        _clinicNameController.clear();
-        _cityController.clear();
-        _addressController.clear();
-        _locationController.clear();
+        clinicNameController.clear();
+        cityController.clear();
+        addressController.clear();
+        locationController.clear();
         setState(() {
-          _selectedDays.forEach((key, value) {
-            value['isSelected'] = false; // Reset selected days
+          selectedDays.forEach((key, value) {
+            value['isSelected'] = false;
           });
         });
       } catch (e) {
@@ -127,7 +120,7 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
         );
       } finally {
         setState(() {
-          _isLoading = false; // Stop loading
+          isLoading = false;
         });
       }
     }
@@ -156,34 +149,34 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
               SizedBox(height: 20),
 
               TextFormField(
-                controller: _clinicNameController,
+                controller: clinicNameController,
                 decoration: InputDecoration(labelText: "Clinic/Hospital Name",hintText: "Ali Hospital", border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? "Please enter clinic/hospital name" : null,
               ),
               SizedBox(height: 20),
               TextFormField(
-                controller: _FeeController,
+                controller: FeeController,
                 decoration: InputDecoration(labelText: "Fees",hintText: "1000", border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? "Please enter clinic/hospital name" : null,
               ),
               SizedBox(height: 20),
 
               TextFormField(
-                controller: _addressController,
+                controller: addressController,
                 decoration: InputDecoration(labelText: "Address",hintText: "123,street 2,Ali town" ,border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? "Please enter address" : null,
               ),
               SizedBox(height: 20),
 
               TextFormField(
-                controller: _cityController,
+                controller: cityController,
                 decoration: InputDecoration(labelText: "City",hintText: "Lahore", border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? "Please enter city" : null,
               ),
               SizedBox(height: 20),
 
               TextFormField(
-                controller: _locationController,
+                controller: locationController,
                 decoration: InputDecoration(labelText: "Location", border: OutlineInputBorder()),
                 validator: (value) => value!.isEmpty ? "Please enter location" : null,
               ),
@@ -195,35 +188,34 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
               ),
               SizedBox(height: 10),
 
-              // Display days of the week with checkboxes and time pickers
               Column(
-                children: _daysOfWeek.map((day) {
+                children: daysOfWeek.map((day) {
                   return Column(
                     children: [
                       CheckboxListTile(
                         title: Text(day),
-                        value: _selectedDays[day]!['isSelected'],
+                        value: selectedDays[day]!['isSelected'],
                         onChanged: (value) {
-                          _toggleDaySelection(day);
+                          toggleDaySelection(day);
                         },
                       ),
-                      if (_selectedDays[day]!['isSelected']!)
+                      if (selectedDays[day]!['isSelected']!)
                         Row(
                           children: [
                             Expanded(
                               child: ListTile(
                                 title: Text("Start Time"),
-                                subtitle: Text(_selectedDays[day]!['start']!.format(context)),
+                                subtitle: Text(selectedDays[day]!['start']!.format(context)),
                                 trailing: Icon(Icons.access_time),
-                                onTap: () => _selectTime(context, day, true),
+                                onTap: () => selectTime(context, day, true),
                               ),
                             ),
                             Expanded(
                               child: ListTile(
                                 title: Text("End Time"),
-                                subtitle: Text(_selectedDays[day]!['end']!.format(context)),
+                                subtitle: Text(selectedDays[day]!['end']!.format(context)),
                                 trailing: Icon(Icons.access_time),
-                                onTap: () => _selectTime(context, day, false),
+                                onTap: () => selectTime(context, day, false),
                               ),
                             ),
                           ],
@@ -236,7 +228,7 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
 
               Center(
                 child: ElevatedButton(
-                  onPressed: _saveClinicInfo,
+                  onPressed: saveClinicInfo,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
                   child: Text("Save Clinic Info", style: TextStyle(color: Colors.white, fontSize: 18)),
                 ),
@@ -246,8 +238,8 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      _saveClinicInfo();
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Home()));
+                      saveClinicInfo();
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ThankYouScreen()));
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),

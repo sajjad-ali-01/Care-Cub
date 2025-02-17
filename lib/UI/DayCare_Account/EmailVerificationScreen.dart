@@ -1,27 +1,23 @@
+import 'package:carecub/UI/DayCare_Account/Login.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:carecub/UI/User/Login.dart';
-
-import '../../Database/DatabaseServices.dart';
+import 'ThankyouScreen.dart';
 import '../../Logic/Users/User_Deletion.dart';
-import 'ChildDetailsScreen.dart';
 
 
 
 class EmailVerificationScreen extends StatefulWidget {
-  final String name;
   final String email;
-  final String phone;
   late User? user;
   final String password;
 
 
+
   EmailVerificationScreen({
     Key? key,
-    required this.name,
     required this.email,
-    required this.phone,
     required this.user,
     required this.password,
   }) : super(key: key);
@@ -51,12 +47,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
             if (currentUser.emailVerified) {
               isVerified = true;
-              await DatabaseService.saveUserData(
-                uid: widget.user!.uid,
-                name: widget.name,
-                email: widget.email,
-                phone: widget.phone,
-              );
               navigateToNextScreen();
             }
           }
@@ -70,35 +60,27 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    userSubscription.cancel();
+    timer?.cancel();
+    super.dispose();
+  }
 
 
-
-
-  // Store user data in Firestore
-  // Future<void> _storeUserData() async {
-  //   if (user != null) {
-  //     await FirebaseFirestore.instance.collection('users').doc(user?.uid).set({
-  //       'name': widget.name,
-  //       'email': widget.email,
-  //       'phone': widget.phone,
-  //       'isVerified': true,
-  //       'createdAt': FieldValue.serverTimestamp(),
-  //     });
-  //   }
-  // }
 
   void navigateToNextScreen() {
     if (!isVerified) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => BabyProfileScreen()),
+      MaterialPageRoute(builder: (context) => ThankYouScreen()),
     );
   }
   void navigateToLoginScreen() {
     if (isVerified) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => Login()),
+      MaterialPageRoute(builder: (context) => DayCareLogin()),
     );
   }
   @override

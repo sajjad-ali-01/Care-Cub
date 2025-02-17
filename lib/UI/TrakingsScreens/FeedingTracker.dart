@@ -83,7 +83,7 @@ class _FeedingTrackerScreenState extends State<FeedingTrackerScreen> {
     String date = "${DateTime.now().day} Jan";
 
     return Scaffold(
-      backgroundColor: Color(0xFFB3E5FC), // Light blue background
+      backgroundColor: Color(0xFFB3E5FC),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Color(0xFFB3E5FC),
@@ -208,7 +208,7 @@ class _FeedingTrackerScreenState extends State<FeedingTrackerScreen> {
               // Save routine logic
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF4A148C), // Purple button
+              backgroundColor: Color(0xFF4A148C),
               padding: EdgeInsets.symmetric(horizontal: 60, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),

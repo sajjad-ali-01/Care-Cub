@@ -33,13 +33,14 @@ class TrackersList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trackers'),
+        backgroundColor: Colors.deepOrange.shade500,
+        title: const Text('Trackers',style: TextStyle(color: Colors.white),),
       ),
       body: ListView.builder(
         itemCount: activities.length,
         itemBuilder: (context, index) {
           final activity = activities[index];
-          final tileColor = tileColors[index % tileColors.length]; // Rotate colors
+          final tileColor = tileColors[index % tileColors.length];
           return Card(
             margin: const EdgeInsets.all(8.0),
             color: tileColor,
@@ -78,7 +79,6 @@ class TrackersList extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => VaccinationTrackerScreen()),
                   );
                 } else {
-                  // Show a dialog with activity details for other activities
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(

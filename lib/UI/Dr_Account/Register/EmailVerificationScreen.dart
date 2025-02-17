@@ -1,7 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:carecub/Logic/Users/ParentsLogic.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:carecub/UI/User/Login.dart';
 
@@ -44,18 +43,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   void initState() {
     super.initState();
 
-    // Listen to user changes
     userSubscription =
         FirebaseAuth.instance.userChanges().listen((User? currentUser) async {
           if (currentUser != null) {
-            await currentUser.reload(); // Reload the user state
+            await currentUser.reload();
             setState(() {
               user = currentUser;
             });
 
             if (currentUser.emailVerified) {
               isVerified = true;
-              await _setUserLoggedIn(); // Save login state locally
               await DatabaseService.saveDrData(
                 uid: widget.user!.uid,
                 name: widget.name,
@@ -63,15 +60,15 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 phone: widget.phone,
                 title: widget.title,
                 city: widget.city,
-              ); // Store user data in Firestore
+              );
               navigateToNextScreen();
             }
           }
         });
 
-    // Stop checking after 3 minutes
-    timer = Timer(Duration(minutes: 1), () {
+    timer = Timer(Duration(minutes: 3), () {
       if (!isVerified) {
+        showToast(message: "Verification Failed");
         User_Deletion.reauthenticateAndDelete(widget.password);
         navigateToLoginScreen();
       }
@@ -79,26 +76,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
   @override
   void dispose() {
-    userSubscription.cancel(); // Cancel the subscription to avoid memory leaks
+    userSubscription.cancel();
     timer?.cancel();
     super.dispose();
   }
 
-  // Save login state in SharedPreferences
-  Future<void> _setUserLoggedIn() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isVerify', true);
-  }
 
   void navigateToNextScreen() {
-    if (!isVerified) return; // Ensure navigation happens only once
+    if (!isVerified) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => SignUpStep2()),
     );
   }
   void navigateToLoginScreen() {
-    if (isVerified) return; // Prevent navigating back if already verified
+    if (isVerified) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => Login()),
