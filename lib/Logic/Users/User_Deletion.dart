@@ -21,15 +21,12 @@ class User_Deletion{
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // Example: Delete user document from 'users' collection
       await firestore.collection('users').doc(uid).delete();
       print('User document deleted from Firestore');
       await firestore.collection('DayCare').doc(uid).delete();
       print('User document deleted from Firestore');
       await firestore.collection('Doctors').doc(uid).delete();
       print('User document deleted from Firestore');
-
-      // Example: Delete all posts by the user from 'posts' collection
       final QuerySnapshot postsSnapshot = await firestore
           .collection('posts')
           .where('authorId', isEqualTo: uid)
@@ -53,11 +50,9 @@ class User_Deletion{
 
     if (user != null) {
       try {
-        // Step 1: Delete user from Firebase Authentication
-        await deleteUserFromAuth();
 
-        // Step 2: Delete user documents from Firestore
-        await deleteUserDocumentsFromFirestore(user.uid);
+        await deleteUserFromAuth();
+await deleteUserDocumentsFromFirestore(user.uid);
 
 
 
@@ -76,15 +71,13 @@ class User_Deletion{
 
     if (user != null && user.email != null) {
       try {
-        // Reauthenticate the user
+
         final AuthCredential credential = EmailAuthProvider.credential(
           email: user.email!,
           password: password,
         );
         await user.reauthenticateWithCredential(credential);
-
-        // Delete the account
-        await deleteUserAccount();
+await deleteUserAccount();
       } catch (e) {
         print('Error reauthenticating and deleting account: $e');
         throw e;

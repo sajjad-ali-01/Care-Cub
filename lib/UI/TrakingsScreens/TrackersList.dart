@@ -22,7 +22,6 @@ class TrackersList extends StatelessWidget {
     },
   ];
 
-  // List of tile colors
   final List<Color> tileColors = [
     Colors.lightBlue.shade50,
     Colors.lightGreen.shade50,
@@ -62,7 +61,6 @@ class TrackersList extends StatelessWidget {
               subtitle: Text(activity['description']!),
               trailing: const Icon(Icons.arrow_forward, color: Colors.grey),
               onTap: () {
-                // Navigate to specific activity
                 if (activity['title'] == 'Sleep Tracking') {
                   Navigator.push(
                     context,

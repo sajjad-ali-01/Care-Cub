@@ -1,11 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../../Database/DataBaseReadServices.dart';
 import 'BookingScreen.dart';
+import 'package:intl/intl.dart';
+
 
 class DoctorProfile extends StatefulWidget {
   final Map<String, dynamic> doctor;
+  final List<String> EDU_Info;
 
-  DoctorProfile({Key? key, required this.doctor}) : super(key: key);
+  DoctorProfile({Key? key, required this.doctor,required this.EDU_Info,}) : super(key: key);
 
   @override
   _DoctorProfileState createState() => _DoctorProfileState();
@@ -13,7 +17,6 @@ class DoctorProfile extends StatefulWidget {
 
 class _DoctorProfileState extends State<DoctorProfile> {
   List<Map<String, dynamic>> clinics = [];
-  List<Map<String, dynamic>> educationList = [];
   bool isLoading = true;
   @override
   void initState() {
@@ -36,21 +39,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
       });
     }
   }
-  Future<void> fetchEducationDetails() async {
-    try {
-      List<Map<String, dynamic>> fetchedEducation =
-      await DataBaseReadServices.getDoctorEducation(widget.doctor['uid']);
-      setState(() {
-        educationList = fetchedEducation;
-        isLoading = false;
-      });
-    } catch (e) {
-      print("Error fetching education details: $e");
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -93,11 +82,12 @@ class _DoctorProfileState extends State<DoctorProfile> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              widget.doctor['specialization'] + "," + widget.doctor['secondary_specialization'],
+                            Text(widget.EDU_Info.isNotEmpty
+                                ? widget.EDU_Info.join(", ")  + ", "+ widget.doctor['specialization']
+                                : 'No education info available',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade100,
@@ -125,11 +115,14 @@ class _DoctorProfileState extends State<DoctorProfile> {
                 Secondary_Specialization: widget.doctor['secondary_specialization'],
                 clinics: clinics, // Pass clinics
                 isLoading: isLoading,
-                qualification: widget.doctor['qualification'],
+                qualification: widget.EDU_Info.isNotEmpty
+                    ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                    : 'No education info available',
+                doctorId: widget.doctor['doctorId'],
               ),
               Services(),
               ReviewCard(),
-              Education(),
+             // Education(),
               About(),
               Locations(), // Updated to display clinics
               SizedBox(height: 20),
@@ -190,110 +183,200 @@ class _DoctorProfileState extends State<DoctorProfile> {
 
 
   Widget ReviewCard() {
-    return Card(
-      color: Colors.white,
-      margin: EdgeInsets.only(left: 16, right: 16, top: 16),
-      elevation: 4,
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('doctor_reviews')
+          .where('doctorId', isEqualTo: widget.doctor['uid'])
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading reviews'));
+        }
+
+        final reviews = snapshot.data?.docs ?? [];
+        final totalReviews = reviews.length;
+
+        // Calculate average ratings
+        double doctorRatingTotal = 0;
+        double clinicRatingTotal = 0;
+        double staffRatingTotal = 0;
+
+        for (var review in reviews) {
+          final data = review.data() as Map<String, dynamic>;
+          doctorRatingTotal += (data['doctorRating'] as num).toDouble();
+          clinicRatingTotal += (data['clinicRating'] as num).toDouble();
+          staffRatingTotal += (data['staffRating'] as num).toDouble();
+        }
+
+        final avgDoctorRating = totalReviews > 0 ? (doctorRatingTotal / totalReviews) : 0;
+        final avgClinicRating = totalReviews > 0 ? (clinicRatingTotal / totalReviews) : 0;
+        final avgStaffRating = totalReviews > 0 ? (staffRatingTotal / totalReviews) : 0;
+        final overallRating = totalReviews > 0
+            ? ((avgDoctorRating + avgClinicRating + avgStaffRating) / 3)
+            : 0;
+
+            // Get latest 2 reviews for display
+            final latestReviews = reviews.take(2).toList();
+
+        return Card(
+          color: Colors.white,
+          margin: EdgeInsets.only(left: 16, right: 16, top: 16),
+          elevation: 4,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.star, color: Colors.blueAccent.shade700),
-                SizedBox(width: 10),
-                Text(
-                  "Dr. "+widget.doctor['name'] + "'s Reviews",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                       // Icon(Icons.star, color: Colors.blueAccent.shade700),
+                        SizedBox(width: 10),
+                        Text(
+                          "Dr. ${widget.doctor['name']}'s Reviews",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.blueAccent.shade700, size: 24),
+                        SizedBox(width: 4),
+                        Text(
+                          overallRating.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Column(
+                SizedBox(height: 16),
+                Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.black,
-                      child: Text("100%",
-                          style: TextStyle(color: Colors.white, fontSize: 25)),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.black,
+                          child: Text(
+                            "${(overallRating * 20).toStringAsFixed(0)}%",
+                            style: TextStyle(color: Colors.white, fontSize: 25),
+                          ),
+                        ),
+                        Text(
+                          "Satisfied out of ($totalReviews)",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      "Satisfied out of (340)",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
+                    SizedBox(width: 20),
+                    Column(
+                      children: [
+                        RatingRow("Doctor Checkup", "${avgDoctorRating.toStringAsFixed(1)}/5"),
+                        RatingRow("Clinic Environment", "${avgClinicRating.toStringAsFixed(1)}/5"),
+                        RatingRow("Staff Behaviour", "${avgStaffRating.toStringAsFixed(1)}/5"),
+                      ],
                     ),
                   ],
                 ),
-                SizedBox(width: 20),
-                Column(
-                  children: [
-                    RatingRow("Doctor Checkup", "100%"),
-                    RatingRow("Clinic Environment", "100%"),
-                    RatingRow("Staff Behaviour", "100%"),
-                  ],
+                SizedBox(height: 20),
+                if (latestReviews.isNotEmpty)
+                  ...latestReviews.map((review) {
+                    final data = review.data() as Map<String, dynamic>;
+                    final date = (data['createdAt'] as Timestamp).toDate();
+                    final formattedDate = DateFormat('MMM d, y').format(date);
+
+                    return Container(
+                      padding: EdgeInsets.all(12),
+                      margin: EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '"${data['feedback'] ?? 'No feedback provided'}"',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Verified patient: ${_obscureName(data['patientName'] ?? 'Anonymous')} · $formattedDate',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.star, color: Colors.orangeAccent.shade700, size: 16),
+                              Text(
+                                ' ${data['overallRating']?.toStringAsFixed(1) ?? '0'}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orangeAccent.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DoctorReviewsScreen(
+                          doctorId: widget.doctor['uid'],
+                          doctorName: widget.doctor['name'],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text("See All Reviews", style: TextStyle(fontSize: 15)),
+                  style: OutlinedButton.styleFrom(shape: StadiumBorder()),
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blueGrey[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.doctor['name'] +
-                        '"is highly professional and compassionate.'
-                            'They listened to my concerns carefully and provided excellent treatment."',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  Text(
-                    '"I had a great experience with ${widget.doctor['name']} Their expertise and friendly approach made me feel comfortable and confident ',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '"Verified patient: A** ***a . 1 day ago',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () {},
-              child: Text("See All Reviews", style: TextStyle(fontSize: 15)),
-              style: OutlinedButton.styleFrom(shape: StadiumBorder()),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget RatingRow(String label, String percentage) {
+  String _obscureName(String name) {
+    if (name.isEmpty || name == 'Anonymous') return 'Anonymous';
+    final parts = name.split(' ');
+    if (parts.length == 1) return '${parts[0][0]}***';
+    return '${parts[0][0]}*** ${parts.last[0]}***';
+  }
+
+  Widget RatingRow(String label, String rating) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -308,7 +391,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
             ),
           ),
           Text(
-            percentage,
+            rating,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -316,35 +399,6 @@ class _DoctorProfileState extends State<DoctorProfile> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget Education() {
-    return Card(
-      elevation: 4,
-      color: Colors.white,
-      margin: EdgeInsets.only(left: 16, right: 16, top: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Icon(Icons.school_sharp, color: Colors.black),
-                SizedBox(width: 10),
-                Text('Education',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            ),
-            SizedBox(height: 8),
-            Text('${widget.doctor['qualification']} - Institute of Medical Sciences, Pakistan, 2021'),
-            Text(
-                'MCPS (Dermatology) - College of Physicians and Surgeons, Pakistan, 2021'),
-          ],
-        ),
       ),
     );
   }
@@ -397,6 +451,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
               ],
             ),
             SizedBox(height: 8),
+            Image.asset("assets/images/Map.jpg")
           ],
         ),
       ),
@@ -411,6 +466,7 @@ class ClinicDetails extends StatefulWidget {
   final String qualification;
   final List<Map<String, dynamic>> clinics;
   final bool isLoading;
+  final String doctorId;
 
   ClinicDetails({
     required this.doctorName,
@@ -420,6 +476,7 @@ class ClinicDetails extends StatefulWidget {
     required this.isLoading,
     required this.Secondary_Specialization,
     required this.qualification,
+    required this.doctorId,
   });
 
   @override
@@ -454,8 +511,8 @@ class _ClinicDetailsState extends State<ClinicDetails> {
         final tomorrow = now.add(Duration(days: 1));
         final todayDay = _getDayName(now.weekday);
         final tomorrowDay = _getDayName(tomorrow.weekday);
-        final DataRow todayRow = _buildAvailabilityRow('Today', todayDay, availability);
-        final DataRow tomorrowRow = _buildAvailabilityRow('Tomorrow', tomorrowDay, availability);
+        final DataRow todayRow = buildAvailabilityRow('Today', todayDay, availability);
+        final DataRow tomorrowRow = buildAvailabilityRow('Tomorrow', tomorrowDay, availability);
         final List<DataRow> allAvailabilityRows = availability.entries.map((entry) {
           return DataRow(
             cells: [
@@ -512,13 +569,17 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => BookingScreen(
+                          doctorId: widget.doctorId,
                           name: widget.doctorName,
                           Image: widget.doctorImage,
                           Specialization: widget.specialization,
-                          locations: clinic['ClinicName'],
+                          locations: clinic['Location'],
+                          clinicName: clinic['ClinicName'],
+                          Address: clinic['Address'], // Add this line
                           Secondary_Specialization: widget.Secondary_Specialization,
-                          Address: clinic['Address'],
                           qualification: widget.qualification,
+                          availability: clinic['Availability'],
+                        //  initialClinicId: clinic['id'],
                         ),
                       ),
                     );
@@ -542,7 +603,7 @@ class _ClinicDetailsState extends State<ClinicDetails> {
       }).toList(),
     );
   }
-  DataRow _buildAvailabilityRow(String label, String day, Map<String, dynamic> availability) {
+  DataRow buildAvailabilityRow(String label, String day, Map<String, dynamic> availability) {
     final timings = availability[day];
     return DataRow(
       cells: [
@@ -551,6 +612,158 @@ class _ClinicDetailsState extends State<ClinicDetails> {
             ? '${timings['start']} - ${timings['end']}'
             : 'Not available')),
       ],
+    );
+  }
+}
+class DoctorReviewsScreen extends StatelessWidget {
+  final String doctorId;
+  final String doctorName;
+
+  const DoctorReviewsScreen({
+    required this.doctorId,
+    required this.doctorName,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Reviews for Dr. $doctorName'),
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('doctor_reviews')
+            .where('doctorId', isEqualTo: doctorId)
+            //.orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error loading reviews: ${snapshot.error.toString()}',
+                style: TextStyle(color: Colors.red),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text(
+                'No reviews yet',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+
+          final reviews = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: reviews.length,
+            itemBuilder: (context, index) {
+              try {
+                final review = reviews[index].data() as Map<String, dynamic>;
+                final date = review['createdAt'] != null
+                    ? (review['createdAt'] as Timestamp).toDate()
+                    : DateTime.now();
+                final formattedDate = DateFormat('MMM d, y').format(date);
+
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              review['patientName']?.toString() ?? 'Anonymous',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              formattedDate,
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.star, color: Colors.amber, size: 16),
+                            Text(
+                              ' ${(review['overallRating']?.toStringAsFixed(1)) ?? '0.0'}',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        if (review['feedback'] != null && review['feedback'].toString().isNotEmpty)
+                          Text(
+                            review['feedback'].toString(),
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            if (review['doctorRating'] != null)
+                              Chip(
+                                label: Text(
+                                  'Doctor: ${review['doctorRating'].toStringAsFixed(1)}',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.blue,
+                              ),
+                            if (review['clinicRating'] != null)
+                              Chip(
+                                label: Text(
+                                  'Clinic: ${review['clinicRating'].toStringAsFixed(1)}',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            if (review['staffRating'] != null)
+                              Chip(
+                                label: Text(
+                                  'Staff: ${review['staffRating'].toStringAsFixed(1)}',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              } catch (e) {
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Error loading review: ${e.toString()}',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                );
+              }
+            },
+          );
+        },
+      ),
     );
   }
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../Community/Community.dart';
 import 'PatientHistory.dart';
 import 'DoctorProfile.dart';
+import 'package:intl/intl.dart';
 
 class DoctorDashboard extends StatefulWidget {
   @override
@@ -9,62 +12,72 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
-  List<Map<String, dynamic>> appointments = [
-    {
-      'name': 'Sajjad Ali',
-      'gender': 'Male',
-      'age': 2,
-      'contact': '2343242432',
-      'time': '10:00 AM',
-      'description': 'Follow-up for growth and development check.'
-    },
-    {
-      'name': 'Faseeh',
-      'gender': 'Male',
-      'age': 5,
-      'contact': '34543543445',
-      'time': '11:30 AM',
-      'description': 'General consultation and flu symptoms.'
-    },
-    {
-      'name': 'Ayesha',
-      'gender': 'Female',
-      'age': 7,
-      'contact': '45435435344',
-      'time': '1:00 PM',
-      'description': 'Follow-up for asthma management.'
-    },
-  ];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late String doctorId;
 
-  List<Map<String, dynamic>> history = [];
-
-  void acceptAppointment(int index) {
-    setState(() {
-      history.add(appointments[index]);
-      appointments.removeAt(index);
-    });
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    doctorId = user!.uid;
   }
 
-  void declineAppointment(int index) {
+  Future<void> acceptAppointment(String appointmentId) async {
+    try {
+      await _firestore.collection('Bookings').doc(appointmentId).update({
+        'status': 'confirmed',
+        'confirmedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error accepting appointment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to accept appointment')),
+      );
+    }
+  }
+
+  Future<void> declineAppointment(String appointmentId) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        String declineReason = '';
         return AlertDialog(
-          title: Text("Confirm Decline"),
-          content: Text("Are you sure you want to decline this appointment?"),
+          title: Text("Decline Appointment"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Are you sure you want to decline this appointment?"),
+              SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: 'Reason for declining',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => declineReason = value,
+              ),
+            ],
+          ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
               child: Text("Cancel"),
             ),
             TextButton(
-              onPressed: () {
-                setState(() {
-                  appointments.removeAt(index);
-                });
-                Navigator.pop(context);
+              onPressed: () async {
+                try {
+                  await _firestore.collection('Bookings').doc(appointmentId).update({
+                    'status': 'declined',
+                    'declinedAt': FieldValue.serverTimestamp(),
+                    'declineReason': declineReason,
+                  });
+                  Navigator.pop(context);
+                } catch (e) {
+                  print('Error declining appointment: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to decline appointment')),
+                  );
+                }
               },
               child: Text("Decline", style: TextStyle(color: Colors.red)),
             ),
@@ -81,7 +94,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: true,
-          title: Text('Doctor Dashboard',style: TextStyle(color: Colors.white),),
+          title: Text('Doctor Dashboard', style: TextStyle(color: Colors.white)),
           bottom: TabBar(
             indicatorColor: Colors.white,
             labelColor: Colors.white,
@@ -95,12 +108,12 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
               Tab(icon: Icon(Icons.person), text: 'Profile'),
             ],
           ),
-          backgroundColor: Colors.deepOrange.shade500
+          backgroundColor: Colors.deepOrange.shade500,
         ),
         body: TabBarView(
           children: [
-            HomePage(appointments, acceptAppointment, declineAppointment),
-            PatientHistoryPage(history),
+            DoctorAppointmentsPage(doctorId: doctorId, onAccept: acceptAppointment, onDecline: declineAppointment),
+            PatientHistoryPage(),
             CommunityPage(),
             DoctorProfilePage(),
           ],
@@ -110,88 +123,327 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
   }
 }
 
-// 🏠 **Home Page**
-class HomePage extends StatelessWidget {
-  final List<Map<String, dynamic>> appointments;
-  final Function(int) acceptAppointment;
-  final Function(int) declineAppointment;
+class DoctorAppointmentsPage extends StatelessWidget {
+  final String doctorId;
+  final Function(String) onAccept;
+  final Function(String) onDecline;
 
-  HomePage(this.appointments, this.acceptAppointment, this.declineAppointment);
+  const DoctorAppointmentsPage({
+    required this.doctorId,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(16.0),
-      child: ListView.builder(
-        itemCount: appointments.length,
-        itemBuilder: (context, index) {
-          final appointment = appointments[index];
-          List<Color> tileColors = [
-            Colors.yellow.shade100,
-            Colors.green.shade100,
-            Colors.orange.shade100,
-            Colors.teal.shade100,
-            Colors.purple.shade100,
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Bookings')
+          .where('doctorId', isEqualTo: doctorId)
+          .where('status', isEqualTo: 'pending')
+          //.orderBy('date')
+          //.orderBy('time')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
 
-          ];
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading appointments'));
+        }
 
-          Color tileColor = tileColors[index % tileColors.length];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AppointmentDetailPage(
-                    appointment: appointment,
-                    onAccept: () => acceptAppointment(index),
-                    onDecline: () => declineAppointment(index),
+        if (snapshot.data?.docs.isEmpty ?? true) {
+          return Center(child: Text('No pending appointments found'));
+        }
+
+        final appointments = snapshot.data!.docs;
+
+        return Padding(
+          padding: EdgeInsets.all(16.0),
+          child: ListView.builder(
+            itemCount: appointments.length,
+            itemBuilder: (context, index) {
+              final appointment = appointments[index];
+              final data = appointment.data() as Map<String, dynamic>;
+              final appointmentId = appointment.id;
+
+              return Card(
+                margin: EdgeInsets.only(bottom: 16),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with patient name and status
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              data['childName'] ?? 'Patient Name',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                          ),
+                          Chip(
+                            label: Text(
+                              data['status']?.toUpperCase() ?? 'PENDING',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            backgroundColor: Colors.orange,
+                            shape: StadiumBorder(
+                              side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+
+                      // Clinic information
+                      Row(
+                        children: [
+                          Icon(Icons.medical_services, color: Colors.green),
+                          SizedBox(width: 10),
+                          Text(
+                            data['clinicName'] ?? 'Clinic Name',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text(
+                            data['clinicAddress'] ?? 'Clinic Address',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+
+                      // Divider
+                      Divider(color: Colors.grey.shade300),
+                      SizedBox(height: 12),
+
+                      // Patient information
+                      Row(
+                        children: [
+                          Icon(Icons.person, size: 18, color: Colors.deepOrange),
+                          SizedBox(width: 8),
+                          Text(
+                            'Patient: ${data['childName'] ?? 'N/A'}',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                          SizedBox(width: 16),
+                          Icon(Icons.family_restroom_sharp, size: 18, color: Colors.deepOrange),
+                          SizedBox(width: 8),
+                          Text(
+                            data['gender'] ?? 'N/A',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+
+                      // Contact information
+                      Row(
+                        children: [
+                          Icon(Icons.phone, size: 18, color: Colors.deepOrange),
+                          SizedBox(width: 8),
+                          Text(
+                            'Contact: ${data['contactNumber'] ?? 'N/A'}',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+
+                      // Divider
+                      Divider(color: Colors.grey.shade300),
+                      SizedBox(height: 12),
+
+                      // Appointment details
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Appointment Date',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  _formatDate(data['date']),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Appointment Time',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  data['time'] ?? 'N/A',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+
+                      // Description
+                      if (data['description'] != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reason:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              data['description'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                          ],
+                        ),
+
+                      // Accept/Decline buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => onAccept(appointmentId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                'Accept',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => onDecline(appointmentId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                'Decline',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Created at information
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Booked on ${_formatDateTime(data['createdAt'])}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
             },
-            child: Card(
-              color: tileColor,
-              margin: EdgeInsets.symmetric(vertical: 8.0),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
-              elevation: 4,
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: AssetImage('assets/images/profile_pic.png'),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            appointment['name'],
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text("Time: ${appointment['time']}"),
-                          Text("Description: ${appointment['description']}"),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
+
+  String _formatDate(Timestamp? timestamp) {
+    if (timestamp == null) return 'N/A';
+    final date = timestamp.toDate();
+    return DateFormat.yMMMMd().format(date);
+  }
+
+  String _formatDateTime(Timestamp? timestamp) {
+    if (timestamp == null) return 'N/A';
+    final date = timestamp.toDate();
+    return DateFormat('yMMMd – hh:mm a').format(date);
+  }
 }
+
 class AppointmentDetailPage extends StatelessWidget {
   final Map<String, dynamic> appointment;
+  final String appointmentId;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
 
-  AppointmentDetailPage({required this.appointment, required this.onAccept, required this.onDecline});
+  const AppointmentDetailPage({
+    required this.appointment,
+    required this.appointmentId,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -207,15 +459,19 @@ class AppointmentDetailPage extends StatelessWidget {
               backgroundImage: AssetImage('assets/images/profile_pic.png'),
             ),
             SizedBox(height: 16),
-            Text(appointment['name'], style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              appointment['childName'] ?? 'No Name',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 8),
-            Text("Gender: ${appointment['gender']}"),
-            Text("Age: ${appointment['age']}"),
-            Text("Contact: ${appointment['contact']}"),
+            Text("Gender: ${appointment['gender'] ?? 'Not specified'}"),
+            Text("Age: ${appointment['age'] ?? 'Not specified'}"),
+            Text("Contact: ${appointment['contactNumber'] ?? 'Not specified'}"),
+            Text("Date: ${_formatDate(appointment['date'])}"),
             Text("Time: ${appointment['time']}"),
             SizedBox(height: 10),
             Text("Description:", style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(appointment['description']),
+            Text(appointment['description'] ?? 'No description provided'),
             Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -226,14 +482,14 @@ class AppointmentDetailPage extends StatelessWidget {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: Text("Accept",style: TextStyle(color: Colors.white),),
+                  child: Text("Accept", style: TextStyle(color: Colors.white)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                   onPressed: () {
                     onDecline();
                   },
-                  child: Text("Decline",style: TextStyle(color: Colors.white),),
+                  child: Text("Decline", style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -242,7 +498,119 @@ class AppointmentDetailPage extends StatelessWidget {
       ),
     );
   }
+
+  String _formatDate(Timestamp timestamp) {
+    return DateFormat('MMM dd, yyyy').format(timestamp.toDate());
+  }
 }
+
+// class PatientHistoryPage extends StatelessWidget {
+//   final String doctorId;
+//
+//   const PatientHistoryPage({required this.doctorId});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return StreamBuilder<QuerySnapshot>(
+//       stream: FirebaseFirestore.instance
+//           .collection('Bookings')
+//           .where('doctorId', isEqualTo: doctorId)
+//           .where('status', whereIn: ['completed', 'confirmed', 'declined'])
+//           .orderBy('date', descending: true)
+//           .snapshots(),
+//       builder: (context, snapshot) {
+//         if (snapshot.connectionState == ConnectionState.waiting) {
+//           return Center(child: CircularProgressIndicator());
+//         }
+//
+//         if (snapshot.hasError) {
+//           return Center(child: Text('Error loading history'));
+//         }
+//
+//         if (snapshot.data?.docs.isEmpty ?? true) {
+//           return Center(child: Text('No history found'));
+//         }
+//
+//         final history = snapshot.data!.docs;
+//
+//         return Padding(
+//           padding: EdgeInsets.all(16.0),
+//           child: ListView.builder(
+//             itemCount: history.length,
+//             itemBuilder: (context, index) {
+//               final appointment = history[index];
+//               final data = appointment.data() as Map<String, dynamic>;
+//               final status = data['status'];
+//
+//               return Card(
+//                 margin: EdgeInsets.symmetric(vertical: 8.0),
+//                 child: Padding(
+//                   padding: EdgeInsets.all(16.0),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Row(
+//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                         children: [
+//                           Text(
+//                             data['childName'] ?? 'No Name',
+//                             style: TextStyle(
+//                               fontSize: 18,
+//                               fontWeight: FontWeight.bold,
+//                             ),
+//                           ),
+//                           Chip(
+//                             label: Text(
+//                               status.toUpperCase(),
+//                               style: TextStyle(color: Colors.white),
+//                             ),
+//                             backgroundColor: _getStatusColor(status),
+//                           ),
+//                         ],
+//                       ),
+//                       SizedBox(height: 8),
+//                       Text("Date: ${_formatDate(data['date'])}"),
+//                       Text("Time: ${data['time']}"),
+//                       if (status == 'declined' && data['declineReason'] != null)
+//                         Column(
+//                           crossAxisAlignment: CrossAxisAlignment.start,
+//                           children: [
+//                             SizedBox(height: 8),
+//                             Text(
+//                               "Decline Reason:",
+//                               style: TextStyle(fontWeight: FontWeight.bold),
+//                             ),
+//                             Text(data['declineReason']),
+//                           ],
+//                         ),
+//                     ],
+//                   ),
+//                 ),
+//               );
+//             },
+//           ),
+//         );
+//       },
+//     );
+//   }
+//
+//   Color _getStatusColor(String status) {
+//     switch (status.toLowerCase()) {
+//       case 'completed':
+//         return Colors.green;
+//       case 'confirmed':
+//         return Colors.blue;
+//       case 'declined':
+//         return Colors.red;
+//       default:
+//         return Colors.grey;
+//     }
+//   }
+//
+//   String _formatDate(Timestamp timestamp) {
+//     return DateFormat('MMM dd, yyyy').format(timestamp.toDate());
+//   }
+// }
 
 class CommunityPage extends StatelessWidget {
   @override
@@ -250,14 +618,13 @@ class CommunityPage extends StatelessWidget {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context)=>Community()));
+          Navigator.push(context, MaterialPageRoute(builder: (context) => CommunityScreen()));
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Joined Community!")),
-
           );
         },
         style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange.shade400),
-        child: Text("Join Community",style: TextStyle(color: Colors.white),),
+        child: Text("Join Community", style: TextStyle(color: Colors.white)),
       ),
     );
   }

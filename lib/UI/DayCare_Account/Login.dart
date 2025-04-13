@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../Logic/Users/ParentsLogic.dart';
+import '../../Logic/Users/Functions.dart';
 import '../DayCare/Daycarecenter/MainScreen.dart';
 import '../User/ForgotPassword.dart';
 import 'Register.dart';

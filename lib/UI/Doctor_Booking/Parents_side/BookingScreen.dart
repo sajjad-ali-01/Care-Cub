@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingScreen extends StatefulWidget {
+  final String doctorId;
   final String name;
   final String Image;
   final String Specialization;
@@ -8,15 +12,20 @@ class BookingScreen extends StatefulWidget {
   final String locations;
   final String Address;
   final String qualification;
+  final Map<String, dynamic> availability;
+  final String clinicName;
 
   BookingScreen({
+    required this.doctorId,
     required this.name,
     required this.Image,
     required this.Specialization,
+    required this.Secondary_Specialization,
     required this.locations,
     required this.Address,
-    required this.Secondary_Specialization,
-    required this.qualification
+    required this.qualification,
+    required this.availability,
+    required this.clinicName,
   });
 
   @override
@@ -26,42 +35,169 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   DateTime? selectedDate;
   String? selectedTime;
+  List<String> availableTimeSlots = [];
   final TextEditingController childNameController = TextEditingController();
+  final TextEditingController problem = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
+  final TextEditingController dobController = TextEditingController(); // New controller for DOB
   String? selectedGender;
+  DateTime? selectedDob; // New variable for date of birth
 
-  final List<String> availableTimeSlots = [
-    '9:00 AM',
-    '10:00 AM',
-    '11:00 AM',
-    '1:00 PM',
-    '2:00 PM',
-    '3:00 PM',
-  ];
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Monday';
+      case 2: return 'Tuesday';
+      case 3: return 'Wednesday';
+      case 4: return 'Thursday';
+      case 5: return 'Friday';
+      case 6: return 'Saturday';
+      case 7: return 'Sunday';
+      default: return '';
+    }
+  }
+  Future<void> _selectDob(BuildContext context) async {
+    final DateTime now = DateTime.now();
+    final DateTime tenYearsAgo = DateTime(now.year - 10, now.month, now.day);
+    final DateTime firstAllowedDate = DateTime(now.year - 10, 1, 1); // January 1st of 10 years ago
 
-  void DatePicker() async {
-    DateTime? pickedDate = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
+      initialDate: tenYearsAgo, // Default to 10 years ago
+      firstDate: firstAllowedDate, // Only allow dates from 10 years ago
+      lastDate: now, // Up to current date
+      initialDatePickerMode: DatePickerMode.year, // Start with year selection
+      helpText: 'Select child\'s date of birth (max 10 years old)',
+      fieldHintText: 'DD/MM/YYYY',
+      errorFormatText: 'Enter valid date',
+      errorInvalidText: 'Child must be 10 years or younger',
     );
-    if (pickedDate != null) {
+
+    if (picked != null && picked != selectedDob) {
       setState(() {
-        selectedDate = pickedDate;
-        dateController.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+        selectedDob = picked;
+        dobController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
   }
+  TimeOfDay _parseTime(String timeStr) {
+    try {
+      final format = DateFormat('h:mm a');
+      final dateTime = format.parse(timeStr);
+      return TimeOfDay.fromDateTime(dateTime);
+    } catch (e) {
+      print("Error parsing time: $e");
+      return TimeOfDay(hour: 0, minute: 0);
+    }
+  }
+
+  List<String> generateTimeSlots(String startTime, String endTime) {
+    final start = _parseTime(startTime);
+    final end = _parseTime(endTime);
+    List<String> slots = [];
+
+    TimeOfDay current = start;
+
+    while (current.hour < end.hour ||
+        (current.hour == end.hour && current.minute < end.minute)) {
+      slots.add(current.format(context));
+
+      // Add 20 minutes
+      final totalMinutes = current.hour * 60 + current.minute + 20;
+      current = TimeOfDay(
+        hour: totalMinutes ~/ 60,
+        minute: totalMinutes % 60,
+      );
+    }
+
+    return slots;
+  }
+  // void DatePicker() async {
+  //   DateTime? pickedDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: DateTime.now(),
+  //     firstDate: DateTime.now(),
+  //     lastDate: DateTime.now().add(Duration(days: 365)),
+  //     selectableDayPredicate: (date) {
+  //       final dayName = _getDayName(date.weekday);
+  //       return widget.availability.containsKey(dayName);
+  //     },
+  //   );
+  //
+  //   if (pickedDate != null && mounted) {
+  //     final dayName = _getDayName(pickedDate.weekday);
+  //     if (widget.availability.containsKey(dayName)) {
+  //       final daySchedule = widget.availability[dayName];
+  //       setState(() {
+  //         selectedDate = pickedDate;
+  //         dateController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+  //         availableTimeSlots = generateTimeSlots(
+  //             daySchedule['start'],
+  //             daySchedule['end']
+  //         );
+  //         selectedTime = null;
+  //       });
+  //     }
+  //   }
+  // }
+  Stream<QuerySnapshot>? _bookingsStream;
+
+  void DatePicker() async {
+    // Find the first available date starting from today
+    DateTime initialDate = DateTime.now();
+    int attempts = 0;
+
+    // Ensure we don't loop indefinitely
+    while (attempts < 365) {
+      final dayName = _getDayName(initialDate.weekday);
+      if (widget.availability.containsKey(dayName)) {
+        break;
+      }
+      initialDate = initialDate.add(Duration(days: 1));
+      attempts++;
+    }
+
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,  // Use the calculated initial date
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(Duration(days: 365)),
+      selectableDayPredicate: (date) {
+        final dayName = _getDayName(date.weekday);
+        return widget.availability.containsKey(dayName);
+      },
+    );
+
+    if (pickedDate != null && mounted) {
+      final dayName = _getDayName(pickedDate.weekday);
+      if (widget.availability.containsKey(dayName)) {
+        final daySchedule = widget.availability[dayName];
+
+        // Set up the real-time bookings stream
+        final selectedDay = DateTime(pickedDate.year, pickedDate.month, pickedDate.day);
+        _bookingsStream = FirebaseFirestore.instance
+            .collection('Bookings')
+            .where('doctorId', isEqualTo: widget.doctorId)
+            .where('date', isEqualTo: Timestamp.fromDate(selectedDay))
+            .where('status', whereIn: ['pending', 'confirmed'])
+            .snapshots();
+
+        setState(() {
+          selectedDate = pickedDate;
+          dateController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+        });
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,//Color(0xFFFFEBFF),
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         backgroundColor: Colors.deepOrange.shade400,
-        title: Text('Confirm Booking',style: TextStyle(color: Color(0xFFFFEBFF)),),
+        title: Text('Confirm Booking', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -88,61 +224,45 @@ class _BookingScreenState extends State<BookingScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(widget.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              Text(widget.Specialization + "," + widget.Secondary_Specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                              Text(widget.qualification, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                              //Text(widget.locations, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                              Text(widget.name,
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text('${widget.qualification}, ${widget.Specialization}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                             ],
                           ),
                         ),
                       ],
                     ),
                     SizedBox(height: 10),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    //   children: [
-                    //     Text("Experience: $experience", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    //     Text(rating, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    //   ],
-                    // ),
-                    SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                SizedBox(width: 8),
                                 Icon(Icons.check_circle, color: Colors.green),
                                 SizedBox(width: 8),
-                                Text(widget.locations,style: TextStyle(fontSize: 16),),
+                                Text(widget.clinicName, style: TextStyle(fontSize: 16)),
                               ],
                             ),
                             SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                SizedBox(width: 8),
                                 Icon(Icons.location_on, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text(widget.Address,style: TextStyle(fontSize: 16),),
+                                Text(widget.Address, style: TextStyle(fontSize: 16)),
                               ],
                             )
-
                           ],
                         )
                       ],
                     ),
-                    SizedBox(height: 10),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            // Child Name Field
+            const SizedBox(height: 20),
             TextField(
               controller: childNameController,
               decoration: InputDecoration(
@@ -151,7 +271,6 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // Gender Dropdown
             DropdownButtonFormField<String>(
               value: selectedGender,
               items: ['Male', 'Female', 'Other']
@@ -160,19 +279,15 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Text(gender),
               ))
                   .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedGender = value;
-                });
-              },
+              onChanged: (value) => setState(() => selectedGender = value),
               decoration: InputDecoration(
                 labelText: 'Gender',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 10),
-            // Contact Number Field
             TextField(
+
               controller: contactController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
@@ -181,7 +296,29 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // Calendar Field
+            TextField(
+              controller: problem,
+              decoration: InputDecoration(
+                labelText: 'Child\'s issue(optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Add Date of Birth field
+            GestureDetector(
+              onTap: () => _selectDob(context),
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: dobController,
+                  decoration: InputDecoration(
+                    labelText: 'Child\'s Date of Birth',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             GestureDetector(
               onTap: DatePicker,
               child: AbsorbPointer(
@@ -195,68 +332,138 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+            if (selectedDate != null) ...[
+              Text('Available Time Slots:', /* ... */),
+              SizedBox(height: 10),
+              StreamBuilder<QuerySnapshot>(
+                stream: _bookingsStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  }
 
-            // Time Slots
-            Text(
-              'Select Time Slot:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Wrap(
-              spacing: 10,
-              children: availableTimeSlots.map((time) {
-                return ChoiceChip(
-                  label: Text(time),
-                  selected: selectedTime == time,
-                  onSelected: (selected) {
-                    setState(() {
-                      selectedTime = selected ? time : null;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 15),
+                  if (snapshot.hasError) {
+                    return Text('Error loading slots');
+                  }
 
-            // Submit Button
+                  // Get booked times
+                  final bookedSlots = snapshot.data?.docs
+                      .map((doc) => doc['time'] as String)
+                      .toList() ?? [];
+
+                  // Generate all possible slots
+                  final dayName = _getDayName(selectedDate!.weekday);
+                  final daySchedule = widget.availability[dayName];
+                  final allSlots = generateTimeSlots(
+                      daySchedule['start'],
+                      daySchedule['end']
+                  );
+
+                  // Filter available slots
+                  final availableSlots = allSlots.where(
+                          (slot) => !bookedSlots.contains(slot)).toList();
+
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: availableSlots.map((time) {
+                      return ChoiceChip(
+                        label: Text(time),
+                        selected: selectedTime == time,
+                        selectedColor: Colors.deepOrange.shade400,
+                        onSelected: (selected) => setState(() => selectedTime = selected ? time : null),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ] else
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text('Select a date to view available time slots',
+                    style: TextStyle(color: Colors.grey)),
+              ),
+            const SizedBox(height: 30),
             Center(
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (childNameController.text.isEmpty ||
                       contactController.text.isEmpty ||
                       selectedGender == null ||
-                      dateController.text.isEmpty ||
-                      selectedTime == null) {
-                    // Show error if any field is missing
+                      selectedDate == null ||
+                      selectedTime == null ||
+                      selectedDob == null)
+                  {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please fill all the fields')),
+                      SnackBar(content: Text('Please fill all required fields')),
                     );
-                  } else {
-                    // Handle booking submission
+                    return;
+                  }
+
+                  final User? user = FirebaseAuth.instance.currentUser;
+                  if (user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('You must be logged in to book')),
+                    );
+                    return;
+                  }
+
+                  try {
+                    await FirebaseFirestore.instance.collection('Bookings').add({
+                      'userId': user.uid,
+                      'doctorId': widget.doctorId,
+                      'childName': childNameController.text,
+                      'description':problem.text,
+                      'gender': selectedGender,
+                      'contactNumber': contactController.text,
+                      'date': Timestamp.fromDate(selectedDate!),
+                      'time': selectedTime,
+                      'status': 'pending',
+                      'createdAt': FieldValue.serverTimestamp(),
+                      'doctorName': widget.name,
+                      'clinicAddress': widget.Address,
+                      'clinicName': widget.clinicName,
+                      'dob': Timestamp.fromDate(selectedDob!), // Add DOB to database
+                      'age': _calculateAge(selectedDob!), // Calculate and store age
+                    });
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            'Booking Confirmed for ${childNameController.text}!'),
+                        content: Text('Booking confirmed for ${childNameController.text}'),
+                        duration: Duration(seconds: 2),
                       ),
+                    );
+                    Navigator.pop(context);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to save booking: $e')),
                     );
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade400,
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 70),
+                  backgroundColor: Colors.deepOrange.shade400,
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text(
-                  'Confirm Booking',
-                  style: TextStyle(fontSize: 18,color: Color(0xFFFFEBFF)),
-                ),
+                child: Text('Confirm Booking',
+                    style: TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+  // Helper method to calculate age from DOB
+  int _calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
   }
 }

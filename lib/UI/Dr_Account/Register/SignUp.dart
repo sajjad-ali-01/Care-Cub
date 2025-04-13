@@ -1,8 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../../Logic/Users/ParentsLogic.dart';
+import '../../../Logic/Users/Functions.dart';
 import 'EmailVerificationScreen.dart';
-
 
 class SignUp extends StatefulWidget {
   const SignUp({super.key});
@@ -20,51 +19,50 @@ class _SignUpState extends State<SignUp> {
   final nameController = TextEditingController();
   final countryController = TextEditingController(text: "Pakistan");
 
-
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
+  bool isLoading = false;
 
   String? selectedTitle;
   String? selectedCity;
-  bool isLoading = false;
-  final List<String> _cities = [
-    'Karachi', 'Lahore', 'Islamabad'
-  ];
+  final List<String> _cities = ['Karachi', 'Lahore', 'Islamabad'];
 
   Future<void> registerUser({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
-    setState(() => isLoading = true);
+    if (_formKey.currentState!.validate()) {
+      setState(() => isLoading = true);
 
-    try {
-      final User? user = await BackendService.registerUser(email, password);
-      if (user != null) {
-        await BackendService.sendVerificationEmail(user);
-        showToast(message: "Verification email sent to $email. Please verify your email.");
+      try {
+        final User? user = await BackendService.registerUser(email, password);
+        if (user != null) {
+          await BackendService.sendVerificationEmail(user);
+          showToast(message: "Verification email sent to $email. Please verify your email.");
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EmailVerificationScreen(
-              name: nameController.text.trim(),
-              email: email,
-              phone: phoneController.text.trim(),
-              title: selectedTitle ??'',
-              city: selectedCity ?? "",
-              user: user,
-              password: password,
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EmailVerificationScreen(
+                name: nameController.text.trim(),
+                email: email,
+                phone: phoneController.text.trim(),
+                title: selectedTitle ?? '',
+                city: selectedCity ?? "",
+                user: user,
+                password: password,
+              ),
             ),
-          ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
         );
+      } finally {
+        setState(() => isLoading = false); // Stop loading
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
-    } finally {
-      setState(() => isLoading = false);
     }
   }
 
@@ -172,6 +170,7 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
+                // Email Field
                 TextFormField(
                   controller: emailController,
                   decoration: InputDecoration(
@@ -186,6 +185,7 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
+                // Phone Field
                 TextFormField(
                   controller: phoneController,
                   keyboardType: TextInputType.phone,
@@ -246,6 +246,7 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 15),
 
+                // Confirm Password Field
                 TextFormField(
                   controller: confirmPasswordController,
                   obscureText: !isConfirmPasswordVisible,
@@ -279,10 +280,16 @@ class _SignUpState extends State<SignUp> {
                 ),
                 SizedBox(height: 20),
 
-                //Next Button
+                // Next Button
                 ElevatedButton(
-                  onPressed: (){
-                    registerUser(email: emailController.text, password: passwordController.text, context: context);
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                    registerUser(
+                      email: emailController.text,
+                      password: passwordController.text,
+                      context: context,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
@@ -291,7 +298,11 @@ class _SignUpState extends State<SignUp> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text(
+                  child: isLoading
+                      ? CircularProgressIndicator(
+                    color: Colors.white, // Show loading indicator
+                  )
+                      : Text(
                     "Next",
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),

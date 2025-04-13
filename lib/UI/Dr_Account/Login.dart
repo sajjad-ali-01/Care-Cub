@@ -1,4 +1,4 @@
-import 'package:carecub/Logic/Users/ParentsLogic.dart';
+import 'package:carecub/Logic/Users/Functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';

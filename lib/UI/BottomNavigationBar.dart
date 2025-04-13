@@ -2,6 +2,7 @@ import 'package:carecub/UI/Community/Community.dart';
 import 'package:carecub/UI/Home.dart';
 import 'package:flutter/material.dart';
 import 'CryTranslation/cryUI.dart';
+import 'Nutrition Guide/NutritionGuidanceScreen.dart';
 import 'TrakingsScreens/TrackersList.dart';
 
 class Tabs extends StatefulWidget {
@@ -17,8 +18,8 @@ class _TabsState extends State<Tabs> {
   final List<Widget> body = [
     Home(),
     CryCaptureScreen(),
-    Icon(Icons.notifications, size: 100),
-    Community(),
+    NutritionGuidanceScreen(),
+    CommunityScreen(),
     TrackersList(),
   ];
 

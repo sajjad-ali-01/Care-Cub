@@ -140,7 +140,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
     }
   }
 
-  Widget _buildDropdownField({
+  Widget buildDropdownField({
     required String label,
     required List<String> items,
     required String? value,
@@ -160,7 +160,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
     );
   }
 
-  Widget _buildMultiSelectSection({
+  Widget buildMultiSelectSection({
     required String title,
     required List<String> options,
     required List<String> selectedOptions,
@@ -199,7 +199,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
               const Text("Confirm Your Details", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
 
-              _buildDropdownField(
+              buildDropdownField(
                 label: 'Title',
                 items: ['Dr.', 'Prof.', 'Assist. Prof.', 'Assoc. Prof.'],
                 value: selectedTitle,
@@ -223,21 +223,21 @@ class _SignUpStep2State extends State<SignUpStep2> {
               ),
               const SizedBox(height: 20),
 
-              _buildDropdownField(
+              buildDropdownField(
                 label: 'Primary Specialization',
                 items: specializations,
                 value: selectedPrimarySpecialization,
                 onChanged: (value) => setState(() => selectedPrimarySpecialization = value),
               ),
 
-              _buildDropdownField(
+              buildDropdownField(
                 label: 'Secondary Specialization',
                 items: specializations,
                 value: selectedSecondarySpecialization,
                 onChanged: (value) => setState(() => selectedSecondarySpecialization = value),
               ),
 
-              _buildMultiSelectSection(
+              buildMultiSelectSection(
                 title: 'Services Offered',
                 options: _servicesOptions,
                 selectedOptions: selectedServices,
@@ -252,7 +252,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
                 },
               ),
 
-              _buildMultiSelectSection(
+              buildMultiSelectSection(
                 title: 'Conditions Treated',
                 options: conditionsOptions,
                 selectedOptions: selectedConditions,

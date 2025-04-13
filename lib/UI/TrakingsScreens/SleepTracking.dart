@@ -1,16 +1,4 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-
-class SleepTrackerApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Sleep Tracker',
-      debugShowCheckedModeBanner: false,
-      home: SleepTrackerScreen(),
-    );
-  }
-}
 
 class SleepTrackerScreen extends StatefulWidget {
   @override
@@ -20,50 +8,64 @@ class SleepTrackerScreen extends StatefulWidget {
 class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
   DateTime? startTime;
   DateTime? endTime;
-  Duration sleepDuration = Duration.zero;
-  bool isTimerRunning = false;
-  Timer? timer;
+  List<Map<String, DateTime>> sleepData = [];
 
-  void startTimer() {
-    if (!isTimerRunning) {
-      setState(() {
-        isTimerRunning = true;
-        startTime = DateTime.now();
-        endTime = null;
-      });
+  Future<void> pickDateTime(bool isStartTime) async {
+    DateTime now = DateTime.now();
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate == null) return;
 
-      timer = Timer.periodic(Duration(seconds: 1), (timer) {
-        setState(() {
-          if (startTime != null) {
-            sleepDuration = DateTime.now().difference(startTime!);
-          }
-        });
-      });
-    }
-  }
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (pickedTime == null) return;
 
-  void stopTimer() {
-    if (isTimerRunning) {
-      setState(() {
-        isTimerRunning = false;
-        endTime = DateTime.now();
-      });
-      timer?.cancel();
-    }
-  }
+    DateTime selectedDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
 
-  void resetTimer() {
     setState(() {
-      startTime = null;
-      endTime = null;
-      sleepDuration = Duration.zero;
-      isTimerRunning = false;
+      if (isStartTime) {
+        startTime = selectedDateTime;
+      } else {
+        endTime = selectedDateTime;
+      }
     });
-    timer?.cancel();
   }
 
-  String formatDuration(Duration duration) {
-    return "${duration.inHours.toString().padLeft(2, '0')}h ${duration.inMinutes.remainder(60).toString().padLeft(2, '0')}m ${duration.inSeconds.remainder(60).toString().padLeft(2, '0')}s";
+  void saveRoutine() {
+    if (startTime != null && endTime != null) {
+      setState(() {
+        sleepData.add({"start": startTime!, "end": endTime!});
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Routine saved successfully!")),
+      );
+    }
+  }
+
+  String formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return "Pick Time";
+    return "${TimeOfDay.fromDateTime(dateTime).format(context)}\n${dateTime.day} ${_monthName(dateTime.month)}";
+  }
+
+  String _monthName(int month) {
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    return months[month - 1];
   }
 
   @override
@@ -73,155 +75,83 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
       body: Column(
         children: [
           SizedBox(height: 50),
-          // Title Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  onPressed: () {},
                   icon: Icon(Icons.arrow_back, color: Colors.black),
                 ),
                 Text(
-                  "Sleep",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+                  "Sleep Tracker",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
                 ),
                 Icon(Icons.nightlight_round, color: Colors.black),
               ],
             ),
           ),
           SizedBox(height: 20),
-          // Start and End Time Section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Column(
                 children: [
-                  Text(
-                    "Start",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    startTime != null
-                        ? "${TimeOfDay.fromDateTime(startTime!).format(context)}\n${startTime!.day} ${_monthName(startTime!.month)}"
-                        : "Pick Start",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+                  Text("Start", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: () => pickDateTime(true),
+                    child: Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: Text(
+                        formatDateTime(startTime),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
                   ),
                 ],
               ),
               Column(
                 children: [
-                  Text(
-                    "End",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    endTime != null
-                        ? "${TimeOfDay.fromDateTime(endTime!).format(context)}\n${endTime!.day} ${_monthName(endTime!.month)}"
-                        : "Pick End",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
+                  Text("End", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: () => pickDateTime(false),
+                    child: Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: Text(
+                        formatDateTime(endTime),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
           SizedBox(height: 20),
-          // Timer Display
-          Container(
-            height: 250,
-            width: 250,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                formatDuration(sleepDuration),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                onPressed: resetTimer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  shape: CircleBorder(),
-                  padding: EdgeInsets.all(20),
-                ),
-                child: Icon(Icons.refresh, color: Colors.orange),
-              ),
-              ElevatedButton(
-                onPressed: isTimerRunning ? stopTimer : startTimer,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  shape: CircleBorder(),
-                  padding: EdgeInsets.all(20),
-                ),
-                child: Icon(
-                  isTimerRunning ? Icons.stop : Icons.play_arrow,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          // Save Routine Button
-          ElevatedButton.icon(
-            onPressed: () {
-              if (sleepDuration.inSeconds > 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Routine saved successfully!")),
-                );
-              }
-            },
-            icon: Icon(Icons.check, color: Colors.white),
-            label: Text("Save routine"),
+          ElevatedButton(
+            onPressed: saveRoutine,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFFB8A27D),
+              backgroundColor: Color(0xFF4A148C),
               padding: EdgeInsets.symmetric(horizontal: 60, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
+            child: Text("Save Routine", style: TextStyle(color: Colors.white, fontSize: 18)),
           ),
         ],
       ),
     );
-  }
-
-  String _monthName(int month) {
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec"
-    ];
-    return months[month - 1];
   }
 }

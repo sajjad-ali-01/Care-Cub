@@ -113,8 +113,8 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Vaccination Tracker"),
-        backgroundColor: Colors.green,
+        title: Text("Vaccination Tracker",style: TextStyle(color: Colors.white),),
+        backgroundColor: Colors.deepOrange.shade400,
       ),
       body: vaccines.isEmpty
           ? Center(
@@ -154,8 +154,8 @@ class _VaccinationTrackerScreenState extends State<VaccinationTrackerScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: showAddVaccineDialog,
-        backgroundColor: Colors.green,
-        child: Icon(Icons.add),
+        backgroundColor: Colors.deepOrange.shade400,
+        child: Icon(Icons.add,color: Colors.white,),
       ),
     );
   }

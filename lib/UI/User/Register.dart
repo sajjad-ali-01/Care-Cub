@@ -1,7 +1,7 @@
 import 'package:carecub/UI/User/Login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/Users/ParentsLogic.dart';
+import '../../Logic/Users/Functions.dart';
 import 'EmailVerificationScreen.dart';
 
 

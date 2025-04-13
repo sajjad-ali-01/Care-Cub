@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../Database/DataBaseReadServices.dart';
-import '../../../Database/DatabaseServices.dart';
 import 'BookingScreen.dart';
 import 'Doctor details.dart';
 import 'MyBookings.dart';
@@ -15,9 +15,6 @@ class Doctorlist extends StatefulWidget {
 class _DoctorListState extends State<Doctorlist> {
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +84,6 @@ class _DoctorListState extends State<Doctorlist> {
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
@@ -99,7 +95,7 @@ class _DoctorListState extends State<Doctorlist> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context)=>BookingsScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => BookingsScreen()));
                     },
                     child: Text("My Bookings", style: TextStyle(fontSize: 15)),
                     style: OutlinedButton.styleFrom(shape: StadiumBorder()),
@@ -121,7 +117,10 @@ class _DoctorListState extends State<Doctorlist> {
                 stream: FirebaseFirestore.instance.collection('Doctors').snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
+                    return ListView.builder(
+                      itemCount: 3,
+                      itemBuilder: (context, index) => ShimmerDoctorCard(),
+                    );
                   } else if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -139,10 +138,20 @@ class _DoctorListState extends State<Doctorlist> {
                           experience: data['experience'] ?? 'No Experience',
                           rating: '98% (350 Satisfied)',
                           fee: '1800',
-                          image: data['photoUrl'] ?? 'assets/images/doctor.jpg',
+                          image: 'assets/images/doctor.jpg',
                           uid: doc.id,
                           services: List<String>.from(data['Service_Offered'] ?? []),
+                          EDU_Info: List<String>.from(
+                        (data['EDU_INFO'] as List<dynamic>? ?? []).map((e) {
+                          // Split on '(' or '-' and take the first part
+                          final degree = e.toString()
+                              .split(RegExp(r'[\(\-]'))[0] // Split on '(' or '-'
+                              .trim(); // Remove any trailing/leading whitespace
+                          return degree;
+                        }).toList(),
+                        ),
                           conditions: List<String>.from(data['Condition'] ?? []),
+                          doctorId: doc.id, // Using document ID directly
                         );
                       }).toList(),
                     );
@@ -157,7 +166,182 @@ class _DoctorListState extends State<Doctorlist> {
   }
 }
 
+class ShimmerDoctorCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 20,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          height: 16,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 4),
+                        Container(
+                          width: double.infinity,
+                          height: 16,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 16,
+                    color: Colors.white,
+                  ),
+                  Container(
+                    width: 120,
+                    height: 16,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              Container(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    Container(
+                      width: 250,
+                      margin: EdgeInsets.symmetric(horizontal: 5),
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade600, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Container(
+                                width: 150,
+                                height: 16,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                width: 15,
+                                height: 15,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Container(
+                                width: 180,
+                                height: 14,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                width: 15,
+                                height: 15,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Container(
+                                width: 180,
+                                height: 14,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                width: 80,
+                                height: 16,
+                                color: Colors.white,
+                              ),
+                              Container(
+                                width: 120,
+                                height: 14,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 10),
+              Center(
+                child: Container(
+                  width: 280,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class DoctorCard extends StatefulWidget {
+  final String doctorId;
   final String name;
   final String title;
   final String specialization;
@@ -170,9 +354,9 @@ class DoctorCard extends StatefulWidget {
   final String uid;
   final List<String> services;
   final List<String> conditions;
+  final List<String> EDU_Info;
 
-
-  DoctorCard({
+  const DoctorCard({
     required this.name,
     required this.specialization,
     required this.qualification,
@@ -185,6 +369,8 @@ class DoctorCard extends StatefulWidget {
     required this.uid,
     required this.services,
     required this.conditions,
+    required this.EDU_Info,
+    required this.doctorId,
   });
 
   @override
@@ -194,6 +380,7 @@ class DoctorCard extends StatefulWidget {
 class _DoctorCardState extends State<DoctorCard> {
   List<Map<String, dynamic>> clinics = [];
   bool isLoading = true;
+
   String dataRowToString(DataRow row) {
     return row.cells.map((cell) => (cell.child as Text).data).join(", ");
   }
@@ -203,6 +390,7 @@ class _DoctorCardState extends State<DoctorCard> {
     super.initState();
     fetchClinics();
   }
+
   Future<void> fetchClinics() async {
     try {
       List<Map<String, dynamic>> fetchedClinics =
@@ -228,11 +416,12 @@ class _DoctorCardState extends State<DoctorCard> {
           MaterialPageRoute(
             builder: (context) => DoctorProfile(
               doctor: {
+                'doctorId': widget.doctorId,
                 'name': widget.name,
-                'title':widget.title,
+                'title': widget.title,
                 'specialization': widget.specialization,
-                'secondary_specialization':widget.secondary_specialization,
-                'qualification': widget.qualification,
+                'secondary_specialization': widget.secondary_specialization,
+              //  'qualification': widget.qualification,
                 'experience': widget.experience,
                 'rating': widget.rating,
                 'fee': widget.fee,
@@ -240,8 +429,11 @@ class _DoctorCardState extends State<DoctorCard> {
                 'uid': widget.uid,
                 'services': widget.services,
                 'conditions': widget.conditions,
-                'Address':clinics[0]['Address'],
-              },
+                'Address': clinics.isNotEmpty ? clinics[0]['Address'] : '',
+               // "EDU_Info": widget.EDU_Info,
+                "clinics":clinics,
+                "doctorId": widget.doctorId,
+              }, EDU_Info: widget.EDU_Info,
             ),
           ),
         );
@@ -266,9 +458,16 @@ class _DoctorCardState extends State<DoctorCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.title + " " +widget.name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                        Text(widget.specialization+"," +widget.secondary_specialization, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                        Text(widget.qualification, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                        Text(
+                          widget.title + " " + widget.name,
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          widget.EDU_Info.isNotEmpty
+                              ? widget.EDU_Info.join(", ")  + ", "+widget.specialization // Combine list items into a comma-separated string
+                              : 'No education info available',
+                          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                        ),
                       ],
                     ),
                   ),
@@ -278,15 +477,91 @@ class _DoctorCardState extends State<DoctorCard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Experience: ${widget.experience} years", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                  Text(widget.rating, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(
+                    "Experience: ${widget.experience} years",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    widget.rating,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
                 ],
               ),
               SizedBox(height: 10),
               Container(
                 height: 100,
                 child: isLoading
-                    ? Center(child: CircularProgressIndicator())
+                    ? Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      Container(
+                        width: 250,
+                        margin: EdgeInsets.symmetric(horizontal: 5),
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade600, width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 150,
+                                  height: 16,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 15,
+                                  height: 15,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 180,
+                                  height: 14,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 15,
+                                  height: 15,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  width: 180,
+                                  height: 14,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
                     : clinics.isEmpty
                     ? Center(child: Text('No clinics found.'))
                     : ListView(
@@ -294,9 +569,7 @@ class _DoctorCardState extends State<DoctorCard> {
                   children: clinics.map((clinic) {
                     final availability = clinic['Availability'] as Map<String, dynamic>? ?? {};
                     final now = DateTime.now();
-
                     final todayDay = getDayName(now.weekday);
-
                     final DataRow todayRow = buildAvailabilityRow('Today', todayDay, availability);
                     String todayRowString = dataRowToString(todayRow);
                     print(todayRowString);
@@ -357,7 +630,6 @@ class _DoctorCardState extends State<DoctorCard> {
                               ),
                             ],
                           ),
-
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -393,19 +665,23 @@ class _DoctorCardState extends State<DoctorCard> {
                     onPressed: () {
                       if (clinics.length > 1) {
                         showHospitalSelection(context);
-                      } else {
-
+                      } else if (clinics.isNotEmpty) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => BookingScreen(
+                              doctorId: widget.doctorId,
                               name: widget.name,
+                              clinicName: clinics[0]['ClinicName'],
                               Image: widget.image,
                               Specialization: widget.specialization,
-                              locations: clinics[0]['ClinicName'],
+                              locations: clinics[0]['Location'],
                               Address: clinics[0]['Address'],
+                              availability: clinics[0]['Availability'],
                               Secondary_Specialization: widget.secondary_specialization,
-                              qualification: widget.qualification,
+                              qualification: widget.EDU_Info.isNotEmpty
+                                  ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                                  : 'No education info available',
                             ),
                           ),
                         );
@@ -469,7 +745,7 @@ class _DoctorCardState extends State<DoctorCard> {
                 itemCount: clinics.length,
                 separatorBuilder: (context, index) => Divider(height: 20),
                 itemBuilder: (context, index) {
-                  final clinic = clinics[index];
+                  final clinic = clinics[index]; // Access clinic via index
                   return InkWell(
                     onTap: () {
                       Navigator.pop(context);
@@ -477,13 +753,18 @@ class _DoctorCardState extends State<DoctorCard> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => BookingScreen(
+                            doctorId: widget.doctorId,
                             name: widget.name,
+                            clinicName: clinic['ClinicName'],
                             Image: widget.image,
                             Specialization: widget.specialization,
-                            Secondary_Specialization: widget.secondary_specialization,
-                            locations: clinic['ClinicName'],
+                            locations: clinic['Location'],
                             Address: clinic['Address'],
-                            qualification: widget.qualification,
+                            availability: clinic['Availability'],
+                            Secondary_Specialization: widget.secondary_specialization,
+                            qualification: widget.EDU_Info.isNotEmpty
+                          ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                                : 'No education info available',
                           ),
                         ),
                       );
@@ -529,7 +810,6 @@ class _DoctorCardState extends State<DoctorCard> {
       ),
     );
   }
-
   String getDayName(int weekday) {
     switch (weekday) {
       case 1: return 'Monday';

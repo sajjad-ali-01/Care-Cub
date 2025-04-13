@@ -119,8 +119,6 @@ class DataBaseReadServices{
       throw e;
     }
   }
-
-
   static Future<void> SaveDayCareData({
     required String uid,
     required Map<String, dynamic> daycareData,

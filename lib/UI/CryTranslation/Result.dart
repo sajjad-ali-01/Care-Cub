@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
 class CryPredictionResultScreen extends StatelessWidget {
-  // Mock data for predictions and suggestion
   final Map<String, double> predictions = {
     'Tired': 40.0,
     'Hungry': 30.0,
     'Discomfort': 25.0,
     'Belly Pain': 20.0,
     'Burping': 15.0,
-    'Others': 10.0,
-
   };
 
   String getSuggestion(Map<String, double> predictions) {

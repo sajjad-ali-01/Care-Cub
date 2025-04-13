@@ -1,9 +1,8 @@
-import 'package:carecub/Logic/Users/ParentsLogic.dart';
+import 'package:carecub/Logic/Users/Functions.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:carecub/UI/User/Login.dart';
-
 import '../../../Database/DatabaseServices.dart';
 import '../../../Logic/Users/User_Deletion.dart';
 import 'Professional_Info.dart';
@@ -38,6 +37,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   late StreamSubscription<User?> userSubscription;
   Timer? timer;
   bool isVerified = false;
+  bool isLoading = false;
+
 
   @override
   void initState() {
@@ -48,20 +49,32 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           if (currentUser != null) {
             await currentUser.reload();
             setState(() {
-              user = currentUser;
+              widget.user = currentUser;
             });
 
             if (currentUser.emailVerified) {
-              isVerified = true;
-              await DatabaseService.saveDrData(
-                uid: widget.user!.uid,
-                name: widget.name,
-                email: widget.email,
-                phone: widget.phone,
-                title: widget.title,
-                city: widget.city,
-              );
-              navigateToNextScreen();
+              setState(() {
+                isLoading = true;
+              });
+
+              if (currentUser.emailVerified) {
+                isVerified = true;
+                await DatabaseService.saveDrData(
+                  uid: widget.user!.uid,
+                  name: widget.name,
+                  email: widget.email,
+                  phone: widget.phone,
+                  title: widget.title,
+                  city: widget.city,
+                );
+
+                setState(() {
+                  isLoading = false;
+                  isVerified = true;
+                });
+
+                navigateToNextScreen();
+              }
             }
           }
         });
@@ -109,98 +122,109 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               SizedBox(height: 50),
               Image.asset('assets/images/email_verification.png'),
               SizedBox(height: 25),
-              Text("Verify Your Email",
+              Text(
+                "Verify Your Email",
                 style: TextStyle(
-                fontSize: 24,
-                  fontWeight: FontWeight.bold
-              ),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
-                'A verification email has been sent to "${user?.email}". Please verify.',
+                'A verification email has been sent to "${widget.user?.email}". Please verify.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18
-                )
+                  color: Colors.black,
+                  fontSize: 18,
+                ),
               ),
               SizedBox(height: 20),
-              ElevatedButton(
-                  onPressed: () async {
-                    if (user != null) {
-                      await user?.sendEmailVerification();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Verification email resent!')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
-                    padding: EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 90),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text(
-                    'Resend Email',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18
-                    ),
-                  )
-              ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Divider(
-                      color: Colors.grey[600],
-                      thickness: 1,
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text(
-                      "OR Click",
-                      style: TextStyle(
-                        color: Colors.grey[600],
+              if (isLoading)
+                CircularProgressIndicator(
+                  color: Colors.deepOrange,
+                ),
+              if (!isLoading)
+                Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (widget.user != null) {
+                          await widget.user?.sendEmailVerification();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Verification email resent!')),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        padding: EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 90),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text(
+                        'Resend Email',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Divider(
-                      color: Colors.grey[600],
-                      thickness: 1,
+                    SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey[600],
+                            thickness: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            "OR Click",
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.grey[600],
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                  onPressed: () async{
-
-                    User_Deletion.reauthenticateAndDelete(widget.password);
-
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
-                    padding: EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 90),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: Text(
-                    'Cancel Request',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        User_Deletion.reauthenticateAndDelete(widget.password);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Login()),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        padding: EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 90),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text(
+                        'Cancel Request',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
-                  )
-              ),
+                  ],
+                ),
             ],
           ),
-          ),
         ),
+      ),
     );
   }
 }

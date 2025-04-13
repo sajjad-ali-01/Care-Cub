@@ -67,7 +67,6 @@ class DatabaseService {
     }
   }
 
-  // Add professional info for a doctor
   static Future<void> AddDrProfessional_Info({
     required String uid,
     String? name,
@@ -101,7 +100,7 @@ class DatabaseService {
     final DocumentReference userDoc = FirebaseFirestore.instance.collection('Doctors').doc(uid);
 
     final Map<String, dynamic> updateData = {
-      'Condition': EDU_INFO,
+      'EDU_INFO': EDU_INFO,
       'PMCNumber':PMCNumber,
       'isVerified' : isVerified,
 

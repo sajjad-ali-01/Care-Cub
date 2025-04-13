@@ -1,6 +1,6 @@
 import 'package:carecub/UI/User/Register.dart';
 import 'package:flutter/material.dart';
-import '../../Logic/Users/ParentsLogic.dart';
+import '../../Logic/Users/Functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../BottomNavigationBar.dart';

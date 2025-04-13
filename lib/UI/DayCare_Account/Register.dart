@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../Database/DataBaseReadServices.dart';
-import '../../Logic/Users/ParentsLogic.dart';
+import '../../Logic/Users/Functions.dart';
 import 'EmailVerificationScreen.dart';
 
 class DaycareRegistrationScreen extends StatefulWidget {
@@ -504,8 +504,9 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
           backgroundColor: Colors.deepOrange.shade400,
           padding: EdgeInsets.symmetric(vertical: 16),
         ),
-        child: Text('Submit Registration', style: TextStyle(fontSize: 18)),
-        onPressed: () async {
+        onPressed: isLoading
+            ? null // Disable the button when loading
+            : () async {
           if (_formKey.currentState!.validate()) {
             if (passwordController.text != confirmPasswordController.text) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -513,6 +514,8 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
               );
               return;
             }
+
+            setState(() => isLoading = true); // Start loading
 
             bool isVerified = false;
             daycareData = {
@@ -536,9 +539,7 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
             };
 
             try {
-
               await registerUser(
-
                 email: emailController.text,
                 password: passwordController.text,
                 context: context,
@@ -562,17 +563,31 @@ class _DaycareRegistrationScreenState extends State<DaycareRegistrationScreen> {
               });
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to submit registration')),
+                SnackBar(content: Text('Failed to submit registration: ${e.toString()}')),
               );
+            } finally {
+              setState(() => isLoading = false);
             }
-          }else{
+          } else {
             showToast(message: "Please fill out all fields");
           }
         },
+        child: isLoading
+            ? SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
+            : Text(
+          'Submit Registration',
+          style: TextStyle(fontSize: 18),
+        ),
       ),
     );
   }
-
   Widget buildLoginLink() {
     return Center(
       child: TextButton(

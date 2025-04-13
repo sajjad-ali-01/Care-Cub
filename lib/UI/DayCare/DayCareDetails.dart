@@ -352,6 +352,8 @@ class _DaycareDetailScreenState extends State<DaycareDetailScreen> {
                 ],
               ),
             ),
+            SizedBox(height: 8),
+            Image.asset("assets/images/Map.jpg")
           ],
         ),
       ),
