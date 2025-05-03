@@ -16,11 +16,11 @@ class DrLogin extends StatefulWidget {
 }
 
 class _DrLoginState extends State<DrLogin> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _isPasswordVisible = false;
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  bool isLoading = false;
+  bool isPasswordVisible = false;
 
   Future<void> signInUser({
     required String email,
@@ -67,22 +67,22 @@ class _DrLoginState extends State<DrLogin> {
   }
 
   void _DrLogin(BuildContext context) async {
-    if (_formKey.currentState!.validate()) {
+    if (formKey.currentState!.validate()) {
       setState(() {
-        _isLoading = true;
+        isLoading = true;
       });
 
       try {
         await signInUser(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
           context: context,
         );
       } catch (e) {
         showToast(message: "Login Failed");
       } finally {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -97,7 +97,7 @@ class _DrLoginState extends State<DrLogin> {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Form(
-              key: _formKey,
+              key: formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -125,7 +125,7 @@ class _DrLoginState extends State<DrLogin> {
                       ),
                       SizedBox(height: 25),
                       TextFormField(
-                        controller: _emailController,
+                        controller: emailController,
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.email_outlined),
                           hintText: 'Email',
@@ -146,17 +146,17 @@ class _DrLoginState extends State<DrLogin> {
                       ),
                       SizedBox(height: 20),
                       TextFormField(
-                        controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
+                        controller: passwordController,
+                        obscureText: !isPasswordVisible,
                         decoration: InputDecoration(
                           prefixIcon: Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(_isPasswordVisible
+                            icon: Icon(isPasswordVisible
                                 ? Icons.visibility
                                 : Icons.visibility_off),
                             onPressed: () {
                               setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
+                                isPasswordVisible = !isPasswordVisible;
                               });
                             },
                           ),
@@ -203,7 +203,7 @@ class _DrLoginState extends State<DrLogin> {
                       ),
                       SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: _isLoading
+                        onPressed: isLoading
                             ? null
                             : () => _DrLogin(context),
                         style: ElevatedButton.styleFrom(
@@ -213,7 +213,7 @@ class _DrLoginState extends State<DrLogin> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: _isLoading
+                        child: isLoading
                             ? CircularProgressIndicator(
                           color: Colors.white,
                         )

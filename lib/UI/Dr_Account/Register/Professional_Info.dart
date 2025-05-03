@@ -11,7 +11,7 @@ class SignUpStep2 extends StatefulWidget {
 }
 
 class _SignUpStep2State extends State<SignUpStep2> {
-  final _formKey = GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
   late TextEditingController nameController;
   late TextEditingController experienceController;
   String? name;
@@ -192,7 +192,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -272,7 +272,7 @@ class _SignUpStep2State extends State<SignUpStep2> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
-                    if (_formKey.currentState!.validate()) {
+                    if (formKey.currentState!.validate()) {
                       DatabaseService.AddDrProfessional_Info(
                         uid: user!.uid,
                         name: nameController.text,

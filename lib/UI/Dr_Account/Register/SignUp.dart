@@ -11,7 +11,7 @@ class SignUp extends StatefulWidget {
 }
 
 class _SignUpState extends State<SignUp> {
-  final _formKey = GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
@@ -32,7 +32,7 @@ class _SignUpState extends State<SignUp> {
     required String password,
     required BuildContext context,
   }) async {
-    if (_formKey.currentState!.validate()) {
+    if (formKey.currentState!.validate()) {
       setState(() => isLoading = true);
 
       try {
@@ -74,7 +74,7 @@ class _SignUpState extends State<SignUp> {
         child: SingleChildScrollView(
           padding: EdgeInsets.all(20),
           child: Form(
-            key: _formKey,
+            key: formKey,
             child: Column(
               children: [
                 SizedBox(height: 30),

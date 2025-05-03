@@ -9,7 +9,7 @@ class EducationScreen extends StatefulWidget {
 }
 
 class _EducationScreenState extends State<EducationScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
   final User? user = FirebaseAuth.instance.currentUser;
 
   final TextEditingController PMCNumberController = TextEditingController();
@@ -37,7 +37,7 @@ class _EducationScreenState extends State<EducationScreen> {
   }
 
   void saveEducation() {
-    if (_formKey.currentState!.validate()) {
+    if (formKey.currentState!.validate()) {
       List<String> selectedDegreeList = [];
       for (var degree in degrees) {
         if (isDegreeSelected[degree] ?? false) {
@@ -75,7 +75,7 @@ class _EducationScreenState extends State<EducationScreen> {
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20),
         child: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

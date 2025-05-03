@@ -11,7 +11,7 @@ class BookingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('My Bookings', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.deepOrange.shade400,
+        backgroundColor: Colors.deepOrange.shade600,
         centerTitle: true,
         actions: [
           IconButton(
@@ -45,7 +45,7 @@ class BookingsScreen extends StatelessWidget {
           final currentBookings = bookings.where((doc) {
             final booking = doc.data() as Map<String, dynamic>;
             final status = booking['status']?.toString().toLowerCase();
-            final isPast = _isPastBooking(booking);
+            final isPast = isPastBooking(booking);
 
             // Show in bookings screen if:
             // 1. Not past booking
@@ -54,7 +54,7 @@ class BookingsScreen extends StatelessWidget {
             return !isPast &&
                 status != 'completed' &&
                 status != 'cancelled' &&
-                (status != 'declined' || !_isDeclinedMoreThanOneDay(booking));
+                (status != 'declined' || !isDeclinedMoreThanOneDay(booking));
           }).toList();
 
           return ListView.builder(
@@ -131,7 +131,7 @@ class BookingsScreen extends StatelessWidget {
     );
   }
 
-  static bool _isPastBooking(Map<String, dynamic> booking) {
+  static bool isPastBooking(Map<String, dynamic> booking) {
     if (booking['date'] == null || booking['time'] == null) return false;
 
     final now = DateTime.now();
@@ -152,7 +152,7 @@ class BookingsScreen extends StatelessWidget {
     }
   }
 
-  static bool _isDeclinedMoreThanOneDay(Map<String, dynamic> booking) {
+  static bool isDeclinedMoreThanOneDay(Map<String, dynamic> booking) {
     if (booking['status']?.toString().toLowerCase() != 'declined') return false;
     if (booking['date'] == null) return false;
 
@@ -172,7 +172,7 @@ class HistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('History', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.deepOrange.shade400,
+        backgroundColor: Colors.deepOrange.shade600,
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -200,10 +200,10 @@ class HistoryScreen extends StatelessWidget {
             // 1. It's a past booking
             // 2. Or status is completed/cancelled
             // 3. Or status is declined and older than 1 day
-            return BookingsScreen._isPastBooking(booking) ||
+            return BookingsScreen.isPastBooking(booking) ||
                 status == 'completed' ||
                 status == 'cancelled' ||
-                (status == 'declined' && BookingsScreen._isDeclinedMoreThanOneDay(booking));
+                (status == 'declined' && BookingsScreen.isDeclinedMoreThanOneDay(booking));
           }).toList();
 
           return ListView.builder(
@@ -401,7 +401,7 @@ class BookingCard extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        _formatDate(booking['date']),
+                        formatDate(booking['date']),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -441,7 +441,7 @@ class BookingCard extends StatelessWidget {
           children: [
             if (isDeclined && booking['declinedAt'] != null)
               Text(
-                'Declined on ${_formatDateTime(booking['declinedAt'])}',
+                'Declined on ${formatDateTime(booking['declinedAt'])}',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.red,
@@ -477,7 +477,7 @@ class BookingCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                'Booked on ${_formatDateTime(booking['createdAt'])}',
+                'Booked on ${formatDateTime(booking['createdAt'])}',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
@@ -491,13 +491,13 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(Timestamp? timestamp) {
+  String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat.yMMMMd().format(date);
   }
 
-  String _formatDateTime(Timestamp? timestamp) {
+  String formatDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat('yMMMd – hh:mm a').format(date);
@@ -616,7 +616,7 @@ class HistoryCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Date: ${_formatDate(booking['date'])}',
+                  'Date: ${formatDate(booking['date'])}',
                   style: TextStyle(fontSize: 14),
                 ),
                 Text(
@@ -687,7 +687,7 @@ class HistoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Booked on ${_formatDateTime(booking['createdAt'])}',
+                  'Booked on ${formatDateTime(booking['createdAt'])}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -696,7 +696,7 @@ class HistoryCard extends StatelessWidget {
                 ),
                 if (isDeclined && booking['declinedAt'] != null)
                   Text(
-                    'Declined on ${_formatDateTime(booking['declinedAt'])}',
+                    'Declined on ${formatDateTime(booking['declinedAt'])}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.red,
@@ -706,7 +706,7 @@ class HistoryCard extends StatelessWidget {
                 if (booking['status']?.toString().toLowerCase() == 'cancelled' &&
                     booking['cancelledAt'] != null)
                   Text(
-                    'Cancelled on ${_formatDateTime(booking['cancelledAt'])}',
+                    'Cancelled on ${formatDateTime(booking['cancelledAt'])}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.purple,
@@ -750,30 +750,30 @@ class HistoryCard extends StatelessWidget {
     String? parentName = await _getParentName(booking['userId']);
 
     // Check for previous feedback
-    try {
-      String? userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId != null && booking['doctorId'] != null && booking['clinicName'] != null) {
-        QuerySnapshot previousFeedback = await FirebaseFirestore.instance
-            .collection('doctor_reviews')
-            .where('userId', isEqualTo: userId)
-            .where('doctorId', isEqualTo: booking['doctorId'])
-            .where('clinicName', isEqualTo: booking['clinicName'])
-            .limit(1)
-            .get();
-
-        hasPreviousFeedback = previousFeedback.docs.isNotEmpty;
-        if (hasPreviousFeedback) {
-          previousFeedbackId = previousFeedback.docs.first.id;
-          var prevData = previousFeedback.docs.first.data() as Map<String, dynamic>;
-          doctorRating = (prevData['doctorRating'] as num?)?.toDouble() ?? 5.0;
-          clinicRating = (prevData['clinicRating'] as num?)?.toDouble() ?? 5.0;
-          staffRating = (prevData['staffRating'] as num?)?.toDouble() ?? 5.0;
-          feedbackController.text = prevData['feedback']?.toString() ?? '';
-        }
-      }
-    } catch (e) {
-      print('Error loading previous feedback: $e');
-    }
+    // try {
+    //   String? userId = FirebaseAuth.instance.currentUser?.uid;
+    //   if (userId != null && booking['doctorId'] != null && booking['clinicName'] != null) {
+    //     QuerySnapshot previousFeedback = await FirebaseFirestore.instance
+    //         .collection('doctor_reviews')
+    //         .where('userId', isEqualTo: userId)
+    //         .where('doctorId', isEqualTo: booking['doctorId'])
+    //         .where('clinicName', isEqualTo: booking['clinicName'])
+    //         .limit(1)
+    //         .get();
+    //
+    //     hasPreviousFeedback = previousFeedback.docs.isNotEmpty;
+    //     if (hasPreviousFeedback) {
+    //       previousFeedbackId = previousFeedback.docs.first.id;
+    //       var prevData = previousFeedback.docs.first.data() as Map<String, dynamic>;
+    //       doctorRating = (prevData['doctorRating'] as num?)?.toDouble() ?? 5.0;
+    //       clinicRating = (prevData['clinicRating'] as num?)?.toDouble() ?? 5.0;
+    //       staffRating = (prevData['staffRating'] as num?)?.toDouble() ?? 5.0;
+    //       feedbackController.text = prevData['feedback']?.toString() ?? '';
+    //     }
+    //   }
+    // } catch (e) {
+    //   print('Error loading previous feedback: $e');
+    // }
 
     showDialog(
       context: context,
@@ -919,16 +919,16 @@ class HistoryCard extends StatelessWidget {
                     };
 
                     // Update existing feedback or create new
-                    if (hasPreviousFeedback && previousFeedbackId != null) {
-                      await FirebaseFirestore.instance
-                          .collection('doctor_reviews')
-                          .doc(previousFeedbackId)
-                          .update(feedbackData);
-                    } else {
+                    // if (hasPreviousFeedback && previousFeedbackId != null) {
+                    //   await FirebaseFirestore.instance
+                    //       .collection('doctor_reviews')
+                    //       .doc(previousFeedbackId)
+                    //       .update(feedbackData);
+                    // } else {
                       await FirebaseFirestore.instance
                           .collection('doctor_reviews')
                           .add(feedbackData);
-                    }
+                    //}
 
                     // Close both dialogs
                     Navigator.pop(context); // loading dialog
@@ -962,13 +962,13 @@ class HistoryCard extends StatelessWidget {
   }
 
 
-  String _formatDate(Timestamp? timestamp) {
+  String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat.yMMMMd().format(date);
   }
 
-  String _formatDateTime(Timestamp? timestamp) {
+  String formatDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat('yMMMd – hh:mm a').format(date);

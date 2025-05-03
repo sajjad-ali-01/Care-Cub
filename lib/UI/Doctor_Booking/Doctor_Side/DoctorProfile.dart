@@ -13,17 +13,16 @@ class DoctorProfilePage extends StatefulWidget {
 }
 
 class _DoctorProfilePageState extends State<DoctorProfilePage> {
-  File? _profileImage;
-  final ImagePicker _picker = ImagePicker();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  File? profileImage;
+  final ImagePicker picker = ImagePicker();
+  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   Map<String, dynamic> doctorData = {};
   bool isLoading = true;
 
-  // Options for dropdowns
-  final List<String> _titles = ['Dr.', 'Prof.', 'Assist. Prof.', 'Assoc. Prof.'];
-  final List<String> _specializations = [
+  final List<String> titles = ['Dr.', 'Prof. Dr.', 'Assist. Prof.', 'Assoc. Prof.'];
+  final List<String> specializations = [
     'General Pediatrics',
     'Pediatric Cardiology',
     'Pediatric Dermatology',
@@ -45,7 +44,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     'Developmental Pediatrics',
     'Pediatric Rehabilitation',
   ];
-  final List<String> _servicesOptions = [
+  final List<String> servicesOptions = [
     'Consultation',
     'Surgery',
     'Therapy',
@@ -72,7 +71,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     'Parenting Workshops',
     'Childhood Obesity Management',
   ];
-  final List<String> _conditionsOptions = [
+  final List<String> conditionsOptions = [
     'Diabetes',
     'Hypertension',
     'Asthma',
@@ -104,7 +103,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     'Skin Conditions (e.g., Eczema, Psoriasis)',
     'Respiratory Infections (e.g., Bronchiolitis, Pneumonia)',
   ];
-  final List<String> _degrees = [
+  final List<String> degrees = [
     "MBBS", "MD", "MS", "PhD", "BDS", "DCH", "DNB", "MRCPCH", "FAAP", "DM",
     "MSc", "MPH", "DPed", "FCPS", "MCh", "DO", "PG Diploma", "BSc Nursing", "MPhil", "FRCPCH",
   ];
@@ -112,14 +111,14 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
   @override
   void initState() {
     super.initState();
-    _fetchDoctorData();
+    fetchDoctorData();
   }
 
-  Future<void> _fetchDoctorData() async {
+  Future<void> fetchDoctorData() async {
     try {
-      final user = _auth.currentUser;
+      final user = auth.currentUser;
       if (user != null) {
-        final doc = await _firestore.collection('Doctors').doc(user.uid).get();
+        final doc = await firestore.collection('Doctors').doc(user.uid).get();
         if (doc.exists) {
           setState(() {
             doctorData = doc.data()!;
@@ -132,15 +131,14 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
       setState(() => isLoading = false);
     }
   }
-  void _editEducation() async {
+  void editEducation() async {
     List<dynamic> currentEducation = doctorData['EDU_INFO'] ?? [];
     List<Map<String, dynamic>> educationDetails = [];
 
-    // Parse existing education if available
     if (currentEducation.isNotEmpty) {
       for (var edu in currentEducation) {
         if (edu is String) {
-          // Parse the string format: "Degree (Year) - College, City, Country"
+          
           try {
             final parts = edu.split(' - ');
             final degreeYear = parts[0].split(' (');
@@ -171,7 +169,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...educationDetails.map((edu) => _buildEducationCard(edu, setState,educationDetails)).toList(),
+                    ...educationDetails.map((edu) => buildEducationCard(edu, setState,educationDetails)).toList(),
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
@@ -210,10 +208,10 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
                     }
 
                     try {
-                      await _firestore.collection('Doctors')
-                          .doc(_auth.currentUser!.uid)
+                      await firestore.collection('Doctors')
+                          .doc(auth.currentUser!.uid)
                           .update({'EDU_INFO': formattedEducation});
-                      _fetchDoctorData();
+                      fetchDoctorData();
                     } catch (e) {
                       print('Error updating education: $e');
                     }
@@ -230,7 +228,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Widget _buildEducationCard(Map<String, dynamic> edu, StateSetter setState, List<Map<String, dynamic>> educationDetails) {
+  Widget buildEducationCard(Map<String, dynamic> edu, StateSetter setState, List<Map<String, dynamic>> educationDetails) {
     String? selectedDegree = edu['degree']!.isEmpty ? null : edu['degree'];
 
 
@@ -243,7 +241,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
             DropdownButtonFormField<String>(
               value: selectedDegree,
               decoration: InputDecoration(labelText: "Degree"),
-              items: _degrees.map((degree) => DropdownMenuItem(
+              items: degrees.map((degree) => DropdownMenuItem(
                 value: degree,
                 child: Text(degree),
               )).toList(),
@@ -293,11 +291,11 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
   }
 
 
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> pickImage() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _profileImage = File(pickedFile.path);
+        profileImage = File(pickedFile.path);
       });
       // TODO: Upload image to Firebase Storage and update photoUrl
     }
@@ -312,12 +310,12 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
         if (fieldName == 'title' ||
             fieldName == 'Primary_specialization' ||
             fieldName == 'Secondary_specialization') {
-          // Handle dropdown fields
+          
           return AlertDialog(
             title: Text("Edit ${fieldName.replaceAll('_', ' ')}"),
             content: DropdownButtonFormField<String>(
               value: currentValue,
-              items: (fieldName == 'title' ? _titles : _specializations)
+              items: (fieldName == 'title' ? titles : specializations)
                   .map((item) => DropdownMenuItem(
                 value: item,
                 child: Text(item),
@@ -333,7 +331,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               TextButton(
                 onPressed: () async {
                   if (newValue != null) {
-                    await _updateField(fieldName, newValue);
+                    await updateField(fieldName, newValue);
                   }
                   Navigator.pop(context);
                 },
@@ -356,7 +354,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               TextButton(
                 onPressed: () async {
                   if (controller.text.isNotEmpty) {
-                    await _updateField(fieldName, controller.text);
+                    await updateField(fieldName, controller.text);
                   }
                   Navigator.pop(context);
                 },
@@ -369,12 +367,12 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Future<void> _updateField(String fieldName, dynamic value) async {
+  Future<void> updateField(String fieldName, dynamic value) async {
     try {
-      await _firestore.collection('Doctors').doc(_auth.currentUser!.uid).update({
+      await firestore.collection('Doctors').doc(auth.currentUser!.uid).update({
         fieldName: value
       });
-      _fetchDoctorData(); // Refresh data
+      fetchDoctorData();
     } catch (e) {
       print('Error updating field: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -383,7 +381,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     }
   }
 
-  void _editArrayField(String fieldName, List<dynamic> currentList) async {
+  void editArrayField(String fieldName, List<dynamic> currentList) async {
     List<dynamic> newList = List.from(currentList);
     bool changesMade = false;
 
@@ -400,7 +398,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
                   shrinkWrap: true,
                   children: [
                     if (fieldName == 'Service_Offered' || fieldName == 'Condition')
-                      _buildMultiSelectField(fieldName, newList, setState),
+                      buildMultiSelectField(fieldName, newList, setState),
                     if (fieldName == 'EDU_INFO')
                       ...newList.map((item) => ListTile(
                         title: Text(item),
@@ -457,10 +455,10 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
                 TextButton(
                   onPressed: () async {
                     if (changesMade || newList.length != currentList.length) {
-                      await _firestore.collection('Doctors')
-                          .doc(_auth.currentUser!.uid)
+                      await firestore.collection('Doctors')
+                          .doc(auth.currentUser!.uid)
                           .update({fieldName: newList});
-                      _fetchDoctorData();
+                      fetchDoctorData();
                     }
                     Navigator.pop(context);
                   },
@@ -474,10 +472,10 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Widget _buildMultiSelectField(String fieldName, List<dynamic> selectedItems, StateSetter setState) {
+  Widget buildMultiSelectField(String fieldName, List<dynamic> selectedItems, StateSetter setState) {
     List<String> options = fieldName == 'Service_Offered'
-        ? _servicesOptions
-        : _conditionsOptions;
+        ? servicesOptions
+        : conditionsOptions;
 
     return Wrap(
       spacing: 8,
@@ -499,7 +497,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
   }
 
   void logout() async {
-    await _auth.signOut();
+    await auth.signOut();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDrLoggedIn', false);
     Navigator.pushAndRemoveUntil(
@@ -535,11 +533,11 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
           children: [
             Center(
               child: GestureDetector(
-                onTap: _pickImage,
+                onTap: pickImage,
                 child: CircleAvatar(
                   radius: 60,
-                  backgroundImage: _profileImage != null
-                      ? FileImage(_profileImage!)
+                  backgroundImage: profileImage != null
+                      ? FileImage(profileImage!)
                       : (doctorData['photoUrl']?.isNotEmpty ?? false
                       ? NetworkImage(doctorData['photoUrl'])
                       : AssetImage("assets/images/profile_pic.png")) as ImageProvider,
@@ -557,25 +555,25 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
             SizedBox(height: 24),
 
             // Basic Information Section
-            _buildSectionHeader("Basic Information"),
-            _buildEditableField("Name", doctorData['name'] ?? '', 'name'),
-            _buildEditableField("Email", doctorData['email'] ?? '', 'email'),
-            _buildEditableField("Phone", doctorData['phone'] ?? '', 'phone'),
-            _buildEditableField("City", doctorData['city'] ?? '', 'city'),
-            _buildEditableField("Experience", doctorData['experience'] ?? '', 'experience'),
-            _buildEditableField("Title", doctorData['title'] ?? '', 'title'),
+            buildSectionHeader("Basic Information"),
+            buildEditableField("Name", doctorData['name'] ?? '', 'name'),
+            buildEditableField("Email", doctorData['email'] ?? '', 'email'),
+            buildEditableField("Phone", doctorData['phone'] ?? '', 'phone'),
+            buildEditableField("City", doctorData['city'] ?? '', 'city'),
+            buildEditableField("Experience", doctorData['experience'] ?? '', 'experience'),
+            buildEditableField("Title", doctorData['title'] ?? '', 'title'),
 
             // Professional Information
-            _buildSectionHeader("Professional Information"),
-            _buildEditableField("PMC Number", doctorData['PMCNumber'] ?? '', 'PMCNumber'),
-            _buildEditableField("Primary Specialization",
+            buildSectionHeader("Professional Information"),
+            buildEditableField("PMC Number", doctorData['PMCNumber'] ?? '', 'PMCNumber'),
+            buildEditableField("Primary Specialization",
                 doctorData['Primary_specialization'] ?? '', 'Primary_specialization'),
-            _buildEditableField("Secondary Specialization",
+            buildEditableField("Secondary Specialization",
                 doctorData['Secondary_specialization'] ?? '', 'Secondary_specialization'),
 
 
             // Education Section
-            _buildSectionHeader("Education"),
+            buildSectionHeader("Education"),
             if ((doctorData['EDU_INFO'] ?? []).isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -591,18 +589,18 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               return SizedBox.shrink();
             }).toList(),
             TextButton(
-              onPressed: _editEducation,
+              onPressed: editEducation,
               child: Text("Edit Education"),
             ),
             // Services Offered
-            _buildSectionHeader("Services Offered"),
-            _buildArrayField("Services", doctorData['Service_Offered'] ?? [], 'Service_Offered'),
+            buildSectionHeader("Services Offered"),
+            buildArrayField("Services", doctorData['Service_Offered'] ?? [], 'Service_Offered'),
 
             // Conditions Treated
-            _buildSectionHeader("Conditions Treated"),
-            _buildArrayField("Conditions", doctorData['Condition'] ?? [], 'Condition'),
+            buildSectionHeader("Conditions Treated"),
+            buildArrayField("Conditions", doctorData['Condition'] ?? [], 'Condition'),
             // Verification Status
-            _buildSectionHeader("Account Status"),
+            buildSectionHeader("Account Status"),
             ListTile(
               title: Text("Verification Status"),
               trailing: Chip(
@@ -623,7 +621,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget buildSectionHeader(String title) {
     return Padding(
       padding: EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
@@ -633,7 +631,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Widget _buildEditableField(String label, String value, String fieldName) {
+  Widget buildEditableField(String label, String value, String fieldName) {
     return ListTile(
       title: Text(label),
       subtitle: Text(value.isNotEmpty ? value : "Not specified"),
@@ -642,7 +640,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-  Widget _buildArrayField(String label, List<dynamic> items, String fieldName) {
+  Widget buildArrayField(String label, List<dynamic> items, String fieldName) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -657,18 +655,18 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               trailing: IconButton(
                 icon: Icon(Icons.delete),
                 onPressed: () async {
-                  await _firestore.collection('Doctors')
-                      .doc(_auth.currentUser!.uid)
+                  await firestore.collection('Doctors')
+                      .doc(auth.currentUser!.uid)
                       .update({
                     fieldName: FieldValue.arrayRemove([item])
                   });
-                  _fetchDoctorData();
+                  fetchDoctorData();
                 },
               ),
             )
         ).toList(),
         TextButton(
-          onPressed: () => _editArrayField(fieldName, items),
+          onPressed: () => editArrayField(fieldName, items),
           child: Text("Edit $label"),
         ),
       ],

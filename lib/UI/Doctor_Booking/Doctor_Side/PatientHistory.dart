@@ -11,7 +11,7 @@ class PatientHistoryPage extends StatefulWidget {
 class _PatientHistoryPageState extends State<PatientHistoryPage> {
   late String doctorId;
   String searchQuery = "";
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -60,7 +60,7 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
           SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore
+              stream: firestore
                   .collection('Bookings')
                   .where('doctorId', isEqualTo: doctorId)
                   .where('status', isEqualTo: 'confirmed')
@@ -70,14 +70,9 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator(color: Colors.deepOrange));
                 }
-                //
-                // if (snapshot.hasError) {
-                //   return Center(child: Text('Error loading bookings', style: TextStyle(color: Colors.red)));
-                // }
 
                 final bookings = snapshot.data?.docs ?? [];
-
-                // Filter by search query
+                
                 final filteredBookings = bookings.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final patientName = data['childName']?.toString().toLowerCase() ?? '';
@@ -124,7 +119,7 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Date: ${_formatDate(appointment['date'])}"),
+                            Text("Date: ${formatDate(appointment['date'])}"),
                             Text("Time: ${appointment['time']}"),
                           ],
                         ),
@@ -152,7 +147,7 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
     );
   }
 
-  String _formatDate(Timestamp timestamp) {
+  String formatDate(Timestamp timestamp) {
     return DateFormat('MMM dd, yyyy').format(timestamp.toDate());
   }
 }
@@ -185,17 +180,17 @@ class PatientDetailPage extends StatelessWidget {
               ),
               SizedBox(height: 20),
 
-              _buildDetailRow("Patient Name", appointment['childName'] ?? 'Not specified'),
-              _buildDetailRow("Gender", appointment['gender'] ?? 'Not specified'),
-              _buildDetailRow("Age", appointment['age']?.toString() ?? 'Not specified'),
-              _buildDetailRow("Contact", appointment['contactNumber'] ?? 'Not specified'),
-              _buildDetailRow("Appointment Date", _formatDate(appointment['date'])),
-              _buildDetailRow("Appointment Time", appointment['time'] ?? 'Not specified'),
-              _buildDetailRow("Confirmed At", _formatDateTime(appointment['confirmedAt'])),
+              buildDetailRow("Patient Name", appointment['childName'] ?? 'Not specified'),
+              buildDetailRow("Gender", appointment['gender'] ?? 'Not specified'),
+              buildDetailRow("Age", appointment['age']?.toString() ?? 'Not specified'),
+              buildDetailRow("Contact", appointment['contactNumber'] ?? 'Not specified'),
+              buildDetailRow("Appointment Date", formatDate(appointment['date'])),
+              buildDetailRow("Appointment Time", appointment['time'] ?? 'Not specified'),
+              buildDetailRow("Confirmed At", formatDateTime(appointment['confirmedAt'])),
               SizedBox(height: 16),
-              _buildDetailSection("Description", appointment['description'] ?? 'No description provided'),
+              buildDetailSection("Description", appointment['description'] ?? 'No description provided'),
               if (appointment['notes'] != null)
-                _buildDetailSection("Doctor Notes", appointment['notes']),
+                buildDetailSection("Doctor Notes", appointment['notes']),
 
               // Add Complete Appointment button
               if (!isCompleted)
@@ -211,7 +206,7 @@ class PatientDetailPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () => _completeAppointment(context),
+                      onPressed: () => completeAppointment(context),
                       child: Text(
                         'Mark as Completed',
                         style: TextStyle(
@@ -251,7 +246,7 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  Future<void> _completeAppointment(BuildContext context) async {
+  Future<void> completeAppointment(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -275,14 +270,12 @@ class PatientDetailPage extends StatelessWidget {
 
     if (confirmed == true) {
       try {
-        // Show loading indicator
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => Center(child: CircularProgressIndicator()),
         );
-
-        // Update status in Firestore
+        
         await FirebaseFirestore.instance
             .collection('Bookings')
             .doc(appointmentId)
@@ -290,25 +283,20 @@ class PatientDetailPage extends StatelessWidget {
           'status': 'completed',
           'completedAt': FieldValue.serverTimestamp(),
         });
-
-        // Close loading indicator
+        
         Navigator.pop(context);
-
-        // Show success message
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Appointment marked as completed'),
             backgroundColor: Colors.green,
           ),
         );
-
-        // Close the detail page and return to previous screen
+        
         Navigator.pop(context);
       } catch (e) {
-        // Close loading indicator
         Navigator.pop(context);
-
-        // Show error message
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to complete appointment: ${e.toString()}'),
@@ -319,7 +307,7 @@ class PatientDetailPage extends StatelessWidget {
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget buildDetailRow(String label, String value) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -340,7 +328,7 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailSection(String title, String content) {
+  Widget buildDetailSection(String title, String content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -363,11 +351,11 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  String _formatDate(Timestamp timestamp) {
+  String formatDate(Timestamp timestamp) {
     return DateFormat('MMMM dd, yyyy').format(timestamp.toDate());
   }
 
-  String _formatDateTime(Timestamp? timestamp) {
+  String formatDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'Not available';
     return DateFormat('MMMM dd, yyyy - hh:mm a').format(timestamp.toDate());
   }
@@ -537,7 +525,7 @@ class HistoryCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Date: ${_formatDate(booking['date'])}',
+                  'Date: ${formatDate(booking['date'])}',
                   style: TextStyle(fontSize: 14),
                 ),
                 Text(
@@ -585,7 +573,7 @@ class HistoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Booked on ${_formatDateTime(booking['createdAt'])}',
+                  'Booked on ${formatDateTime(booking['createdAt'])}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -594,7 +582,7 @@ class HistoryCard extends StatelessWidget {
                 ),
                 if (isDeclined && booking['declinedAt'] != null)
                   Text(
-                    'Declined on ${_formatDateTime(booking['declinedAt'])}',
+                    'Declined on ${formatDateTime(booking['declinedAt'])}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.red,
@@ -604,7 +592,7 @@ class HistoryCard extends StatelessWidget {
                 if (booking['status']?.toString().toLowerCase() == 'cancelled' &&
                     booking['cancelledAt'] != null)
                   Text(
-                    'Cancelled on ${_formatDateTime(booking['cancelledAt'])}',
+                    'Cancelled on ${formatDateTime(booking['cancelledAt'])}',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.purple,
@@ -618,13 +606,13 @@ class HistoryCard extends StatelessWidget {
       ),
     );
   }
-  String _formatDate(Timestamp? timestamp) {
+  String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat.yMMMMd().format(date);
   }
 
-  String _formatDateTime(Timestamp? timestamp) {
+  String formatDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat('yMMMd – hh:mm a').format(date);

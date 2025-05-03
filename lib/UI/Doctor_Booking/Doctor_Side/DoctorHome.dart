@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../Community/Community.dart';
 import 'PatientHistory.dart';
 import 'DoctorProfile.dart';
@@ -12,20 +13,25 @@ class DoctorDashboard extends StatefulWidget {
 }
 
 class _DoctorDashboardState extends State<DoctorDashboard> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
   late String doctorId;
-
+  late SharedPreferences prefs;
+  late bool isCommunityJoined;
   @override
   void initState() {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
     doctorId = user!.uid;
+    getprefs();
+  }
+  Future<void> getprefs() async{
+    prefs = await SharedPreferences.getInstance();
+    isCommunityJoined = await prefs.getBool("isCommunityJoined")??false;
   }
 
   Future<void> acceptAppointment(String appointmentId) async {
     try {
-      await _firestore.collection('Bookings').doc(appointmentId).update({
+      await firestore.collection('Bookings').doc(appointmentId).update({
         'status': 'confirmed',
         'confirmedAt': FieldValue.serverTimestamp(),
       });
@@ -66,7 +72,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             TextButton(
               onPressed: () async {
                 try {
-                  await _firestore.collection('Bookings').doc(appointmentId).update({
+                  await firestore.collection('Bookings').doc(appointmentId).update({
                     'status': 'declined',
                     'declinedAt': FieldValue.serverTimestamp(),
                     'declineReason': declineReason,
@@ -102,8 +108,8 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
             labelStyle: TextStyle(fontWeight: FontWeight.bold),
             unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
             tabs: [
-              Tab(icon: Icon(Icons.home), text: 'Appointments'),
-              Tab(icon: Icon(Icons.history), text: 'Patient History'),
+              Tab(icon: Icon(Icons.home), text: 'Requests'),
+              Tab(icon: Icon(Icons.history), text: 'Patients'),
               Tab(icon: Icon(Icons.group), text: 'Community'),
               Tab(icon: Icon(Icons.person), text: 'Profile'),
             ],
@@ -114,7 +120,7 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           children: [
             DoctorAppointmentsPage(doctorId: doctorId, onAccept: acceptAppointment, onDecline: declineAppointment),
             PatientHistoryPage(),
-            CommunityPage(),
+            isCommunityJoined ? CommunityHomePage():CommunityPage(),
             DoctorProfilePage(),
           ],
         ),
@@ -300,7 +306,7 @@ class DoctorAppointmentsPage extends StatelessWidget {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  _formatDate(data['date']),
+                                  formatDate(data['date']),
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
@@ -400,7 +406,7 @@ class DoctorAppointmentsPage extends StatelessWidget {
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text(
-                          'Booked on ${_formatDateTime(data['createdAt'])}',
+                          'Booked on ${formatDateTime(data['createdAt'])}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
@@ -419,13 +425,13 @@ class DoctorAppointmentsPage extends StatelessWidget {
     );
   }
 
-  String _formatDate(Timestamp? timestamp) {
+  String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat.yMMMMd().format(date);
   }
 
-  String _formatDateTime(Timestamp? timestamp) {
+  String formatDateTime(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();
     return DateFormat('yMMMd – hh:mm a').format(date);
@@ -467,7 +473,7 @@ class AppointmentDetailPage extends StatelessWidget {
             Text("Gender: ${appointment['gender'] ?? 'Not specified'}"),
             Text("Age: ${appointment['age'] ?? 'Not specified'}"),
             Text("Contact: ${appointment['contactNumber'] ?? 'Not specified'}"),
-            Text("Date: ${_formatDate(appointment['date'])}"),
+            Text("Date: ${formatDate(appointment['date'])}"),
             Text("Time: ${appointment['time']}"),
             SizedBox(height: 10),
             Text("Description:", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -499,126 +505,20 @@ class AppointmentDetailPage extends StatelessWidget {
     );
   }
 
-  String _formatDate(Timestamp timestamp) {
+  String formatDate(Timestamp timestamp) {
     return DateFormat('MMM dd, yyyy').format(timestamp.toDate());
   }
 }
-
-// class PatientHistoryPage extends StatelessWidget {
-//   final String doctorId;
-//
-//   const PatientHistoryPage({required this.doctorId});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return StreamBuilder<QuerySnapshot>(
-//       stream: FirebaseFirestore.instance
-//           .collection('Bookings')
-//           .where('doctorId', isEqualTo: doctorId)
-//           .where('status', whereIn: ['completed', 'confirmed', 'declined'])
-//           .orderBy('date', descending: true)
-//           .snapshots(),
-//       builder: (context, snapshot) {
-//         if (snapshot.connectionState == ConnectionState.waiting) {
-//           return Center(child: CircularProgressIndicator());
-//         }
-//
-//         if (snapshot.hasError) {
-//           return Center(child: Text('Error loading history'));
-//         }
-//
-//         if (snapshot.data?.docs.isEmpty ?? true) {
-//           return Center(child: Text('No history found'));
-//         }
-//
-//         final history = snapshot.data!.docs;
-//
-//         return Padding(
-//           padding: EdgeInsets.all(16.0),
-//           child: ListView.builder(
-//             itemCount: history.length,
-//             itemBuilder: (context, index) {
-//               final appointment = history[index];
-//               final data = appointment.data() as Map<String, dynamic>;
-//               final status = data['status'];
-//
-//               return Card(
-//                 margin: EdgeInsets.symmetric(vertical: 8.0),
-//                 child: Padding(
-//                   padding: EdgeInsets.all(16.0),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Row(
-//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                         children: [
-//                           Text(
-//                             data['childName'] ?? 'No Name',
-//                             style: TextStyle(
-//                               fontSize: 18,
-//                               fontWeight: FontWeight.bold,
-//                             ),
-//                           ),
-//                           Chip(
-//                             label: Text(
-//                               status.toUpperCase(),
-//                               style: TextStyle(color: Colors.white),
-//                             ),
-//                             backgroundColor: _getStatusColor(status),
-//                           ),
-//                         ],
-//                       ),
-//                       SizedBox(height: 8),
-//                       Text("Date: ${_formatDate(data['date'])}"),
-//                       Text("Time: ${data['time']}"),
-//                       if (status == 'declined' && data['declineReason'] != null)
-//                         Column(
-//                           crossAxisAlignment: CrossAxisAlignment.start,
-//                           children: [
-//                             SizedBox(height: 8),
-//                             Text(
-//                               "Decline Reason:",
-//                               style: TextStyle(fontWeight: FontWeight.bold),
-//                             ),
-//                             Text(data['declineReason']),
-//                           ],
-//                         ),
-//                     ],
-//                   ),
-//                 ),
-//               );
-//             },
-//           ),
-//         );
-//       },
-//     );
-//   }
-//
-//   Color _getStatusColor(String status) {
-//     switch (status.toLowerCase()) {
-//       case 'completed':
-//         return Colors.green;
-//       case 'confirmed':
-//         return Colors.blue;
-//       case 'declined':
-//         return Colors.red;
-//       default:
-//         return Colors.grey;
-//     }
-//   }
-//
-//   String _formatDate(Timestamp timestamp) {
-//     return DateFormat('MMM dd, yyyy').format(timestamp.toDate());
-//   }
-// }
 
 class CommunityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => CommunityScreen()));
+        onPressed: () async {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => CommunityHomePage()));
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setBool("isCommunityJoined", true);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Joined Community!")),
           );

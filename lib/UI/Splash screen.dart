@@ -41,6 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
         nextScreen = DoctorDashboard();
       }
 
+
       else if(isDaCareLoggedIn){
         nextScreen = MainScreen();
       }

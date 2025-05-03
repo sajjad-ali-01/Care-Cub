@@ -52,7 +52,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
             expandedHeight: 150,
             pinned: true,
             automaticallyImplyLeading: true,
-            backgroundColor: Colors.deepOrange.shade400,
+            backgroundColor: Colors.deepOrange.shade600,
             leading: IconButton(
               onPressed: () {
                 Navigator.pop(context);

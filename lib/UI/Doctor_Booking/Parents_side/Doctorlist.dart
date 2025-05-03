@@ -21,7 +21,7 @@ class _DoctorListState extends State<Doctorlist> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade400,
+        backgroundColor: Colors.deepOrange.shade600,
         elevation: 1,
         leading: isSearching
             ? null
@@ -464,7 +464,7 @@ class _DoctorCardState extends State<DoctorCard> {
                         ),
                         Text(
                           widget.EDU_Info.isNotEmpty
-                              ? widget.EDU_Info.join(", ")  + ", "+widget.specialization // Combine list items into a comma-separated string
+                              ? widget.EDU_Info.join(", ")  + ", "+widget.specialization
                               : 'No education info available',
                           style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                         ),
@@ -763,7 +763,7 @@ class _DoctorCardState extends State<DoctorCard> {
                             availability: clinic['Availability'],
                             Secondary_Specialization: widget.secondary_specialization,
                             qualification: widget.EDU_Info.isNotEmpty
-                          ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                          ? widget.EDU_Info.join(", ")
                                 : 'No education info available',
                           ),
                         ),

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'Community/Community.dart';
 import 'CryTranslation/cryUI.dart';
 import 'Doctor_Booking/Parents_side/Doctorlist.dart';
-import 'Nutrition Guide/NutritionGuidanceScreen.dart';
+import 'Nutrition Guide/SelectDate.dart';
 import 'TrakingsScreens/Milstone.dart';
 import 'TrakingsScreens/TrackersList.dart';
 import 'User/ProfileScreen.dart';
@@ -81,7 +81,7 @@ class _HomeState extends State<Home> {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFFFADB0), Colors.white60, Color(0xFFFFE3EC), Color(0xFFFFADB0)],
+              colors: [Color(0xFFFFADB0), Colors.white60, Color(0xFFFFE3EC), ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -243,10 +243,10 @@ class _HomeState extends State<Home> {
                     buildCard(
                       'Nutrition Guid',
                       Icons.apple,
-                      Colors.red.shade100,
-                      Colors.pink,
+                      Color(0xFFFFEBFF),
+                      Colors.red.shade600,
                           () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>NutritionGuidanceScreen()));
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>AgeSelectionScreen()));
                       },
                     ),
                     buildCard(
@@ -264,20 +264,20 @@ class _HomeState extends State<Home> {
                     buildCard(
                       "Community",
                       Icons.comment,
-                      Color(0xFFDFFAFF),
-                      Colors.cyan, // Shadow color
+                      Color(0xFFFFEBFF),
+                      Colors.red.shade600, // Shadow color
                           () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => CommunityScreen()),
+                          MaterialPageRoute(builder: (context) => CommunityHomePage()),
                         );
                       },
                     ),
                     buildCard(
                       "DayCare Centers",
                       Icons.maps_home_work_sharp,
-                      Color(0xFFE9FEEF),
-                      Colors.blue, // Shadow color
+                      Color(0xFFFFEBFF),
+                      Colors.red.shade600, // Shadow color
                           () {
                         Navigator.push(
                           context,
@@ -288,8 +288,8 @@ class _HomeState extends State<Home> {
                     buildCard(
                       "Trackers",
                       Icons.track_changes,
-                      Color(0xFFFFFFF1),
-                      Colors.orange, // Shadow color
+                      Color(0xFFFFEBFF),
+                      Colors.red.shade600, // Shadow color
                           () {
                         Navigator.push(
                           context,
@@ -300,8 +300,8 @@ class _HomeState extends State<Home> {
                     buildCard(
                       "Milestone Tracking",
                       Icons.show_chart,
-                      Color(0xAFFDFFD6),
-                      Colors.yellow, // Shadow color
+                      Color(0xFFFFEBFF),
+                      Colors.red.shade600, // Shadow color
                           () {
                         Navigator.push(context, MaterialPageRoute(builder: (context)=>MilestonesScreen()));
                       },

@@ -42,7 +42,7 @@ class _BookingScreenState extends State<BookingScreen> {
   final TextEditingController dateController = TextEditingController();
   final TextEditingController dobController = TextEditingController(); // New controller for DOB
   String? selectedGender;
-  DateTime? selectedDob; // New variable for date of birth
+  DateTime? selectedDob;
 
   String _getDayName(int weekday) {
     switch (weekday) {
@@ -56,7 +56,7 @@ class _BookingScreenState extends State<BookingScreen> {
       default: return '';
     }
   }
-  Future<void> _selectDob(BuildContext context) async {
+  Future<void> selectDob(BuildContext context) async {
     final DateTime now = DateTime.now();
     final DateTime tenYearsAgo = DateTime(now.year - 10, now.month, now.day);
     final DateTime firstAllowedDate = DateTime(now.year - 10, 1, 1); // January 1st of 10 years ago
@@ -80,7 +80,7 @@ class _BookingScreenState extends State<BookingScreen> {
       });
     }
   }
-  TimeOfDay _parseTime(String timeStr) {
+  TimeOfDay parseTime(String timeStr) {
     try {
       final format = DateFormat('h:mm a');
       final dateTime = format.parse(timeStr);
@@ -92,8 +92,8 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   List<String> generateTimeSlots(String startTime, String endTime) {
-    final start = _parseTime(startTime);
-    final end = _parseTime(endTime);
+    final start = parseTime(startTime);
+    final end = parseTime(endTime);
     List<String> slots = [];
 
     TimeOfDay current = start;
@@ -112,34 +112,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     return slots;
   }
-  // void DatePicker() async {
-  //   DateTime? pickedDate = await showDatePicker(
-  //     context: context,
-  //     initialDate: DateTime.now(),
-  //     firstDate: DateTime.now(),
-  //     lastDate: DateTime.now().add(Duration(days: 365)),
-  //     selectableDayPredicate: (date) {
-  //       final dayName = _getDayName(date.weekday);
-  //       return widget.availability.containsKey(dayName);
-  //     },
-  //   );
-  //
-  //   if (pickedDate != null && mounted) {
-  //     final dayName = _getDayName(pickedDate.weekday);
-  //     if (widget.availability.containsKey(dayName)) {
-  //       final daySchedule = widget.availability[dayName];
-  //       setState(() {
-  //         selectedDate = pickedDate;
-  //         dateController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
-  //         availableTimeSlots = generateTimeSlots(
-  //             daySchedule['start'],
-  //             daySchedule['end']
-  //         );
-  //         selectedTime = null;
-  //       });
-  //     }
-  //   }
-  // }
+  
   Stream<QuerySnapshot>? _bookingsStream;
 
   void DatePicker() async {
@@ -196,7 +169,7 @@ class _BookingScreenState extends State<BookingScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade400,
+        backgroundColor: Colors.deepOrange.shade600,
         title: Text('Confirm Booking', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
@@ -306,7 +279,7 @@ class _BookingScreenState extends State<BookingScreen> {
             const SizedBox(height: 10),
             // Add Date of Birth field
             GestureDetector(
-              onTap: () => _selectDob(context),
+              onTap: () => selectDob(context),
               child: AbsorbPointer(
                 child: TextField(
                   controller: dobController,
@@ -425,7 +398,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       'clinicAddress': widget.Address,
                       'clinicName': widget.clinicName,
                       'dob': Timestamp.fromDate(selectedDob!), // Add DOB to database
-                      'age': _calculateAge(selectedDob!), // Calculate and store age
+                      'age': calculateAge(selectedDob!), // Calculate and store age
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -457,7 +430,7 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
   // Helper method to calculate age from DOB
-  int _calculateAge(DateTime birthDate) {
+  int calculateAge(DateTime birthDate) {
     final now = DateTime.now();
     int age = now.year - birthDate.year;
     if (now.month < birthDate.month ||
