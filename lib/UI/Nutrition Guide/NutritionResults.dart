@@ -92,10 +92,10 @@ class ResultCard extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),
-            _buildInfoRow('Recommended Intake:',
+            buildInfoRow('Recommended Intake:',
                 recommendedIntake[ageGroup] ?? 'Not specified for this age'),
             const SizedBox(height: 15),
-            _buildInfoRow('Meal Suggestions:',
+            buildInfoRow('Meal Suggestions:',
                 mealSuggestions[ageGroup] ?? 'No specific suggestion for this age'),
             const SizedBox(height: 15),
             const Text(
@@ -136,7 +136,7 @@ class ResultCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget buildInfoRow(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
