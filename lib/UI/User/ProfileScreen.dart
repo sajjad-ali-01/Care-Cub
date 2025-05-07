@@ -1,9 +1,12 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import 'Login.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -16,7 +19,7 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-
+  final ImagePicker _picker = ImagePicker();
   final GoogleSignIn googleSignIn = GoogleSignIn(
     scopes: ['https://www.googleapis.com/auth/drive.file'],
   );
@@ -28,6 +31,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   File? pickedImage;
   bool isEditing = false;
   bool isUpdating = false;
+  bool isUploadingImage = false;
   DateTime? selectedChildDob;
   String? childId;
 
@@ -38,6 +42,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     phoneController = TextEditingController();
     childNameController = TextEditingController();
     childDobController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    childNameController.dispose();
+    childDobController.dispose();
+    super.dispose();
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserDataStream() {
@@ -60,6 +73,58 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     throw Exception('User not logged in');
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          pickedImage = File(image.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
+  }
+
+  Future<String?> _uploadImageToCloudinary() async {
+    if (pickedImage == null) return null;
+
+    try {
+      setState(() => isUploadingImage = true);
+
+      const cloudName = 'dghmibjc3';
+      const uploadPreset = 'CareCub';
+
+      final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(await http.MultipartFile.fromPath(
+          'file',
+          pickedImage!.path,
+        ));
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.toBytes();
+        final responseString = String.fromCharCodes(responseData);
+        final jsonMap = jsonDecode(responseString);
+        return jsonMap['secure_url'];
+      } else {
+        throw Exception('Failed to upload image to Cloudinary');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading image: $e')),
+      );
+      return null;
+    } finally {
+      setState(() => isUploadingImage = false);
+    }
+  }
+
   Future<void> updateProfile() async {
     final user = auth.currentUser;
     if (user == null) return;
@@ -67,11 +132,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() => isUpdating = true);
 
     try {
-      await firestore.collection('users').doc(user.uid).update({
+      String? imageUrl;
+      if (pickedImage != null) {
+        imageUrl = await _uploadImageToCloudinary();
+      }
+
+      final userData = {
         'name': nameController.text,
         'phone': phoneController.text,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      if (imageUrl != null) {
+        userData['photoUrl'] = imageUrl;
+      }
+
+      await firestore.collection('users').doc(user.uid).update(userData);
 
       if (childId != null) {
         await firestore
@@ -87,7 +163,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Profile and child details updated successfully!')),
+        SnackBar(content: Text('Profile updated successfully!')),
       );
 
       setState(() {
@@ -161,20 +237,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         title: Text('User Profile', style: TextStyle(color: Color(0xFFFFEBFF))),
         backgroundColor: Colors.deepOrange.shade500,
         actions: [
-          IconButton(
-            icon: Icon(isEditing ? Icons.save : Icons.edit),
-            onPressed: () {
-              if (isEditing) {
-                ConfirmationDialog();
-              } else {
-                setState(() => isEditing = true);
-              }
-            },
-          )
+          if (isEditing)
+            IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () => ConfirmationDialog(),
+            )
+          else
+            IconButton(
+              icon: Icon(Icons.edit),
+              onPressed: () => setState(() => isEditing = true),
+            )
         ],
         centerTitle: true,
       ),
-      body: isUpdating
+      body: isUpdating || isUploadingImage
           ? Center(child: CircularProgressIndicator())
           : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: getUserDataStream(),
@@ -193,22 +269,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               children: [
                 // User Profile Section
                 GestureDetector(
+                  onTap: isEditing ? _pickImage : null,
                   child: Center(
-                    child: CircleAvatar(
-                      radius: 70,
-                      backgroundImage: pickedImage != null
-                          ? FileImage(pickedImage!)
-                          : (data['photoUrl'] != null && data['photoUrl'] is String
-                          ? NetworkImage(data['photoUrl'])
-                          : null),
-                      child: pickedImage == null && data['photoUrl'] == null
-                          ? Text(
-                        data['name']?.isNotEmpty == true
-                            ? data['name'][0].toUpperCase()
-                            : '?',
-                        style: TextStyle(fontSize: 40),
-                      )
-                          : null,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 70,
+                          backgroundImage: pickedImage != null
+                              ? FileImage(pickedImage!)
+                              : (data['photoUrl'] != null
+                              ? NetworkImage(data['photoUrl'])
+                              : null),
+                          child: pickedImage == null && data['photoUrl'] == null
+                              ? Text(
+                            data['name']?.isNotEmpty == true
+                                ? data['name'][0].toUpperCase()
+                                : '?',
+                            style: TextStyle(fontSize: 40),
+                          )
+                              : null,
+                        ),
+                        if (isEditing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.deepOrange,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.edit, color: Colors.white, size: 20),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -279,7 +373,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           controller: childDobController,
                           decoration: InputDecoration(labelText: 'Date of Birth'),
                           readOnly: true,
-                          onTap: () => selectChildDob(context),
+                          onTap: isEditing ? () => selectChildDob(context) : null,
                         ),
                         SizedBox(height: 20),
                       ],

@@ -116,15 +116,14 @@ class _DoctorDashboardState extends State<DoctorDashboard> {
           ),
           backgroundColor: Colors.deepOrange.shade500,
         ),
-        body: TabBarView(
-          children: [
-            DoctorAppointmentsPage(doctorId: doctorId, onAccept: acceptAppointment, onDecline: declineAppointment),
-            PatientHistoryPage(),
-            isCommunityJoined ? CommunityHomePage():CommunityPage(),
-            DoctorProfilePage(),
-          ],
-        ),
-      ),
+        body:  TabBarView(
+      children: [
+      DoctorAppointmentsPage(doctorId: doctorId, onAccept: acceptAppointment, onDecline: declineAppointment),
+     PatientHistoryPage(),
+      CommunityPage(),
+      DoctorProfilePage(),
+     ],
+    ))
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:io';
+import 'package:http/http.dart' as http;
+
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -62,6 +66,52 @@ class _CommentsScreenState extends State<CommentsScreen> {
         });
       }
     });
+  }
+  // Add this method to upload media to Cloudinary
+  Future<String?> _uploadMediaToCloudinary() async {
+    if (_imageFile == null && _videoFile == null) return null;
+
+    try {
+      setState(() {
+        _isUploading = true;
+      });
+
+      final url = Uri.parse('https://api.cloudinary.com/v1_1/dghmibjc3/upload');
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = 'CareCub';
+
+      if (_imageFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          _imageFile!.path,
+        ));
+      } else if (_videoFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          _videoFile!.path,
+        ));
+      }
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.toBytes();
+        final responseString = String.fromCharCodes(responseData);
+        final jsonMap = jsonDecode(responseString);
+        return jsonMap['secure_url'] ?? jsonMap['url'];
+      } else {
+        throw Exception('Failed to upload media to Cloudinary');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading media: $e')),
+      );
+      return null;
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
+    }
   }
 
   Future<void> _fetchCurrentUserData() async {
@@ -309,6 +359,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     });
   }
 
+  // Update the _postComment method to upload media
   Future<void> _postComment() async {
     if (_commentController.text.trim().isEmpty && _imageFile == null && _videoFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -325,12 +376,21 @@ class _CommentsScreenState extends State<CommentsScreen> {
       final user = _auth.currentUser;
       if (user == null) return;
 
+      // Upload media if exists
+      String? mediaUrl;
+      String? mediaType;
+
+      if (_imageFile != null || _videoFile != null) {
+        mediaUrl = await _uploadMediaToCloudinary();
+        mediaType = _imageFile != null ? 'image' : 'video';
+      }
+
       // Get post details to notify the author
       final postDoc = await _firestore.collection('posts').doc(widget.postId).get();
       final postAuthorId = postDoc.data()?['authorId'] as String?;
       final postText = postDoc.data()?['text'] as String? ?? 'a post';
 
-      // Create comment data
+      // Create comment data with media info
       Map<String, dynamic> commentData = {
         'text': _commentController.text,
         'postId': widget.postId,
@@ -342,16 +402,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
         'upvotes': 0,
         'upvotedBy': [],
         'replyCount': 0,
+        'mediaUrl': mediaUrl,
+        'mediaType': mediaType,
       };
-
-      // Add local media path information if available
-      if (_imageFile != null) {
-        commentData['mediaType'] = 'image';
-        commentData['localMediaPath'] = _imageFile!.path;
-      } else if (_videoFile != null) {
-        commentData['mediaType'] = 'video';
-        commentData['localMediaPath'] = _videoFile!.path;
-      }
 
       // Add comment
       final commentRef = await _firestore
@@ -380,6 +433,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
           'read': false,
           'message': '${_currentUserIsDoctor ? 'Dr. ' : ''}$_currentUserName commented on your post',
           'contentPreview': 'Comment: ${_commentController.text.trim()}',
+          'mediaUrl': mediaUrl,
+          'mediaType': mediaType,
         });
       }
 
@@ -433,6 +488,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
 
   // Update the _postReply method to include doctor status
+  // Update the _postReply method to handle media if needed
   Future<void> _postReply(String commentId) async {
     final controller = _replyControllers[commentId];
     if (controller == null || controller.text.trim().isEmpty) {
@@ -459,7 +515,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .get();
       final commentAuthorId = commentDoc.data()?['authorId'] as String?;
       final commentText = commentDoc.data()?['text'] as String? ?? 'a comment';
-
       final postDoc = await _firestore.collection('posts').doc(widget.postId).get();
       final postText = postDoc.data()?['text'] as String? ?? 'a post';
 
@@ -476,7 +531,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         'authorId': user.uid,
         'authorName': _currentUserName,
         'authorPhotoUrl': _currentUserPhotoUrl,
-        'authorIsDoctor': _currentUserIsDoctor, // Add this line
+        'authorIsDoctor': _currentUserIsDoctor,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -526,6 +581,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       );
     }
   }
+
 
   Future<void> _toggleUpvote(String commentId, List<dynamic> upvotedBy) async {
     try {
@@ -678,22 +734,49 @@ class _CommentsScreenState extends State<CommentsScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(data['text'] ?? ''),
                             ),
-                            if (hasMedia && mediaType == 'image' && localMediaPath != null)
+                            if (hasMedia && mediaType == 'image' && data['mediaUrl'] != null)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Image.file(
-                                  File(localMediaPath),
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    data['mediaUrl'],
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                          child: Icon(Icons.broken_image),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                            if (hasMedia && mediaType == 'video' && localMediaPath != null)
+                            if (hasMedia && mediaType == 'video' && data['mediaUrl'] != null)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: AspectRatio(
                                   aspectRatio: 16 / 9,
                                   child: _VideoPlayerWidget(
-                                    videoPath: localMediaPath,
+                                    videoUrl: data['mediaUrl'],
                                   ),
                                 ),
                               ),
@@ -982,10 +1065,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 }
 
+// Update the _VideoPlayerWidget to handle network URLs
 class _VideoPlayerWidget extends StatefulWidget {
-  final String videoPath;
+  final String videoUrl;
 
-  const _VideoPlayerWidget({required this.videoPath});
+  const _VideoPlayerWidget({required this.videoUrl});
 
   @override
   __VideoPlayerWidgetState createState() => __VideoPlayerWidgetState();
@@ -1003,7 +1087,7 @@ class __VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
   }
 
   Future<void> _initializePlayer() async {
-    _controller = VideoPlayerController.file(File(widget.videoPath));
+    _controller = VideoPlayerController.network(widget.videoUrl);
     await _controller.initialize();
     _chewieController = ChewieController(
       videoPlayerController: _controller,

@@ -138,7 +138,7 @@ class _DoctorListState extends State<Doctorlist> {
                           experience: data['experience'] ?? 'No Experience',
                           rating: '98% (350 Satisfied)',
                           fee: '1800',
-                          image: 'assets/images/doctor.jpg',
+                          image: data['photoUrl'],
                           uid: doc.id,
                           services: List<String>.from(data['Service_Offered'] ?? []),
                           EDU_Info: List<String>.from(
@@ -450,7 +450,7 @@ class _DoctorCardState extends State<DoctorCard> {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: AssetImage(widget.image),
+                    backgroundImage: NetworkImage(widget.image),
                     radius: 30,
                   ),
                   SizedBox(width: 10),

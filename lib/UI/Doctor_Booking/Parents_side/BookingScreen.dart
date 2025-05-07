@@ -170,6 +170,7 @@ class _BookingScreenState extends State<BookingScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         backgroundColor: Colors.deepOrange.shade600,
+        leading: IconButton(onPressed: (){Navigator.pop(context);}, icon: Icon(Icons.arrow_back,color: Colors.white,)),
         title: Text('Confirm Booking', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
@@ -189,7 +190,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage: AssetImage(widget.Image),
+                          backgroundImage: NetworkImage(widget.Image),
                           radius: 40,
                         ),
                         SizedBox(width: 10),
@@ -207,15 +208,11 @@ class _BookingScreenState extends State<BookingScreen> {
                       ],
                     ),
                     SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
                         Column(
                           children: [
                             Row(
                               children: [
                                 Icon(Icons.check_circle, color: Colors.green),
-                                SizedBox(width: 8),
                                 Text(widget.clinicName, style: TextStyle(fontSize: 16)),
                               ],
                             ),
@@ -223,18 +220,18 @@ class _BookingScreenState extends State<BookingScreen> {
                             Row(
                               children: [
                                 Icon(Icons.location_on, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text(widget.Address, style: TextStyle(fontSize: 16)),
+                                Text(widget.Address, style: TextStyle(fontSize: 16),),
+                                Spacer(),
+                                ElevatedButton(onPressed: (){}, child: Text("See on map"))
                               ],
                             )
                           ],
                         )
                       ],
                     ),
-                  ],
                 ),
               ),
-            ),
+
             const SizedBox(height: 20),
             TextField(
               controller: childNameController,

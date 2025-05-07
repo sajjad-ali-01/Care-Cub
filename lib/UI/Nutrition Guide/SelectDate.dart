@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../Doctor_Booking/Doctor_Side/PatientHistory.dart';
+import 'NutritionsHistory.dart';
 import 'NutritionsHome.dart';
 
 
@@ -61,6 +63,25 @@ class _AgeSelectionScreenState extends State<AgeSelectionScreen> {
                     selectedAge = value;
                   });
                 },
+              ),
+              ElevatedButton(
+                onPressed: (){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NutritionHistoryScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                ),
+                child: Text(
+                  'Prediction History',
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
               ),
               const SizedBox(height: 30),
               ElevatedButton(

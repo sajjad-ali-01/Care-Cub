@@ -6,6 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class AnswersScreen extends StatefulWidget {
   final String question;
@@ -60,6 +63,51 @@ class _AnswersScreenState extends State<AnswersScreen> {
         });
       }
     });
+  }
+  Future<String?> _uploadMediaToCloudinary() async {
+    if (_imageFile == null && _videoFile == null) return null;
+
+    try {
+      setState(() {
+        _isUploading = true;
+      });
+
+      final url = Uri.parse('https://api.cloudinary.com/v1_1/dghmibjc3/upload');
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = 'CareCub';
+
+      if (_imageFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          _imageFile!.path,
+        ));
+      } else if (_videoFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          _videoFile!.path,
+        ));
+      }
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.toBytes();
+        final responseString = String.fromCharCodes(responseData);
+        final jsonMap = jsonDecode(responseString);
+        return jsonMap['secure_url'] ?? jsonMap['url'];
+      } else {
+        throw Exception('Failed to upload media to Cloudinary');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading media: $e')),
+      );
+      return null;
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
+    }
   }
 
   Future<void> _fetchUserData() async {
@@ -299,12 +347,21 @@ class _AnswersScreenState extends State<AnswersScreen> {
       final user = _auth.currentUser;
       if (user == null) return;
 
+      // Upload media if exists
+      String? mediaUrl;
+      String? mediaType;
+
+      if (_imageFile != null || _videoFile != null) {
+        mediaUrl = await _uploadMediaToCloudinary();
+        mediaType = _imageFile != null ? 'image' : 'video';
+      }
+
       // Get question details to notify the author
       final questionDoc = await _firestore.collection('questions').doc(widget.questionId).get();
       final questionAuthorId = questionDoc.data()?['authorId'] as String?;
       final questionAuthorName = questionDoc.data()?['authorName'] as String?;
 
-      // Add answer
+      // Add answer with media info
       Map<String, dynamic> answerData = {
         'text': _answerController.text,
         'questionId': widget.questionId,
@@ -316,18 +373,11 @@ class _AnswersScreenState extends State<AnswersScreen> {
         'upvotes': 0,
         'upvotedBy': [],
         'replyCount': 0,
+        'mediaUrl': mediaUrl,
+        'mediaType': mediaType,
       };
 
-      // Add media information if available
-      if (_imageFile != null) {
-        answerData['mediaType'] = 'image';
-        answerData['localMediaPath'] = _imageFile!.path;
-      } else if (_videoFile != null) {
-        answerData['mediaType'] = 'video';
-        answerData['localMediaPath'] = _videoFile!.path;
-      }
-
-      await _firestore
+      final answerRef = await _firestore
           .collection('questions')
           .doc(widget.questionId)
           .collection('answers')
@@ -349,6 +399,8 @@ class _AnswersScreenState extends State<AnswersScreen> {
           'timestamp': FieldValue.serverTimestamp(),
           'read': false,
           'message': '$userName answered your question: "${widget.question}"',
+          'mediaUrl': mediaUrl,
+          'mediaType': mediaType,
         });
       }
 
@@ -627,22 +679,49 @@ class _AnswersScreenState extends State<AnswersScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(data['text'] ?? ''),
                             ),
-                            if (hasMedia && mediaType == 'image' && localMediaPath != null)
+                            if (hasMedia && mediaType == 'image' && data['mediaUrl'] != null)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Image.file(
-                                  File(localMediaPath),
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    data['mediaUrl'],
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                          child: Icon(Icons.broken_image),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                            if (hasMedia && mediaType == 'video' && localMediaPath != null)
+                            if (hasMedia && mediaType == 'video' && data['mediaUrl'] != null)
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: AspectRatio(
                                   aspectRatio: 16 / 9,
                                   child: _VideoPlayerWidget(
-                                    videoPath: localMediaPath,
+                                    videoUrl: data['mediaUrl'],
                                   ),
                                 ),
                               ),
@@ -943,9 +1022,9 @@ class _AnswersScreenState extends State<AnswersScreen> {
 }
 
 class _VideoPlayerWidget extends StatefulWidget {
-  final String videoPath;
+  final String videoUrl;
 
-  const _VideoPlayerWidget({required this.videoPath});
+  const _VideoPlayerWidget({required this.videoUrl});
 
   @override
   __VideoPlayerWidgetState createState() => __VideoPlayerWidgetState();
@@ -963,7 +1042,7 @@ class __VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
   }
 
   Future<void> _initializePlayer() async {
-    _controller = VideoPlayerController.file(File(widget.videoPath));
+    _controller = VideoPlayerController.network(widget.videoUrl);
     await _controller.initialize();
     _chewieController = ChewieController(
       videoPlayerController: _controller,

@@ -1,6 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +22,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
 
   Map<String, dynamic> doctorData = {};
   bool isLoading = true;
+  bool isUploadingImage = false;
 
   final List<String> titles = ['Dr.', 'Prof. Dr.', 'Assist. Prof.', 'Assoc. Prof.'];
   final List<String> specializations = [
@@ -129,6 +132,75 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     } catch (e) {
       print('Error fetching doctor data: $e');
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<String?> _uploadImageToCloudinary() async {
+    if (profileImage == null) return null;
+
+    try {
+      setState(() => isUploadingImage = true);
+
+      const cloudName = 'dghmibjc3'; // Your Cloudinary cloud name
+      const uploadPreset = 'CareCub'; // Your Cloudinary upload preset
+
+      final url = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(await http.MultipartFile.fromPath(
+          'file',
+          profileImage!.path,
+        ));
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.toBytes();
+        final responseString = String.fromCharCodes(responseData);
+        final jsonMap = jsonDecode(responseString);
+        return jsonMap['secure_url'];
+      } else {
+        throw Exception('Failed to upload image to Cloudinary');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading image: $e')),
+      );
+      return null;
+    } finally {
+      setState(() => isUploadingImage = false);
+    }
+  }
+
+  Future<void> pickImage() async {
+    try {
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          profileImage = File(pickedFile.path);
+        });
+
+        // Upload the image to Cloudinary
+        final imageUrl = await _uploadImageToCloudinary();
+
+        if (imageUrl != null) {
+          // Update the photoUrl in Firestore
+          await firestore.collection('Doctors')
+              .doc(auth.currentUser!.uid)
+              .update({'photoUrl': imageUrl});
+
+          // Refresh the data to show the new image
+          fetchDoctorData();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Profile picture updated successfully!')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
     }
   }
   void editEducation() async {
@@ -290,18 +362,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
     );
   }
 
-
-  Future<void> pickImage() async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        profileImage = File(pickedFile.path);
-      });
-      // TODO: Upload image to Firebase Storage and update photoUrl
-    }
-  }
-
-  void _editField(String fieldName, dynamic currentValue) async {
+  void editField(String fieldName, dynamic currentValue) async {
     dynamic newValue = currentValue;
 
     await showDialog(
@@ -497,19 +558,40 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
   }
 
   void logout() async {
-    await auth.signOut();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDrLoggedIn', false);
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const DrLogin()),
-          (Route<dynamic> route) => false,
+    // Show confirmation dialog
+    bool confirmLogout = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Confirm Logout"),
+        content: Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text("Logout", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
-  }
 
+    // Only proceed with logout if user confirmed
+    if (confirmLogout == true) {
+      await auth.signOut();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isDrLoggedIn', false);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const DrLogin()),
+            (Route<dynamic> route) => false,
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading || isUploadingImage) {
       return Scaffold(
         appBar: AppBar(title: Text("Doctor Profile")),
         body: Center(child: CircularProgressIndicator()),
@@ -532,16 +614,32 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: GestureDetector(
-                onTap: pickImage,
-                child: CircleAvatar(
-                  radius: 60,
-                  backgroundImage: profileImage != null
-                      ? FileImage(profileImage!)
-                      : (doctorData['photoUrl']?.isNotEmpty ?? false
-                      ? NetworkImage(doctorData['photoUrl'])
-                      : AssetImage("assets/images/profile_pic.png")) as ImageProvider,
-                ),
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: pickImage,
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundImage: profileImage != null
+                          ? FileImage(profileImage!)
+                          : (doctorData['photoUrl']?.isNotEmpty ?? false
+                          ? NetworkImage(doctorData['photoUrl'])
+                          : AssetImage("assets/images/profile_pic.png")) as ImageProvider,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: 16),
@@ -553,6 +651,9 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               ),
             ),
             SizedBox(height: 24),
+
+            // ... (keep all your existing buildSectionHeader, buildEditableField,
+            // buildArrayField widgets and other UI elements)
 
             // Basic Information Section
             buildSectionHeader("Basic Information"),
@@ -570,7 +671,6 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
                 doctorData['Primary_specialization'] ?? '', 'Primary_specialization'),
             buildEditableField("Secondary Specialization",
                 doctorData['Secondary_specialization'] ?? '', 'Secondary_specialization'),
-
 
             // Education Section
             buildSectionHeader("Education"),
@@ -592,6 +692,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
               onPressed: editEducation,
               child: Text("Edit Education"),
             ),
+
             // Services Offered
             buildSectionHeader("Services Offered"),
             buildArrayField("Services", doctorData['Service_Offered'] ?? [], 'Service_Offered'),
@@ -599,6 +700,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
             // Conditions Treated
             buildSectionHeader("Conditions Treated"),
             buildArrayField("Conditions", doctorData['Condition'] ?? [], 'Condition'),
+
             // Verification Status
             buildSectionHeader("Account Status"),
             ListTile(
@@ -636,7 +738,7 @@ class _DoctorProfilePageState extends State<DoctorProfilePage> {
       title: Text(label),
       subtitle: Text(value.isNotEmpty ? value : "Not specified"),
       trailing: Icon(Icons.edit),
-      onTap: () => _editField(fieldName, value),
+      onTap: () => editField(fieldName, value),
     );
   }
 

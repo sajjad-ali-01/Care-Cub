@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:carecub/UI/Community/questions.dart';
@@ -57,8 +56,6 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
 
   @override
   void dispose() {
-    currentVideoController?.dispose();
-    currentChewieController?.dispose();
     scrollController.dispose();
     feedSubscription?.cancel();
     postSubscriptions.values.forEach((sub) => sub.cancel());
@@ -102,7 +99,7 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
     }
   }
 
-  void initializeVideoPlayer(String videoPath, String postId) async {
+  void initializeVideoPlayer(String videoUrl, String postId) async {
     if (currentPlayingVideoId != null && currentPlayingVideoId != postId) {
       currentVideoController?.dispose();
       currentChewieController?.dispose();
@@ -112,33 +109,42 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
       currentPlayingVideoId = postId;
     });
 
-    currentVideoController = VideoPlayerController.file(File(videoPath));
-    await currentVideoController!.initialize();
+    try {
+      currentVideoController = VideoPlayerController.network(videoUrl);
+      await currentVideoController!.initialize();
 
-    currentChewieController = ChewieController(
-      videoPlayerController: currentVideoController!,
-      autoPlay: true,
-      looping: false,
-      allowFullScreen: true,
-      aspectRatio: currentVideoController!.value.aspectRatio,
-      showControls: true,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: Colors.red,
-        handleColor: Colors.red,
-        backgroundColor: Colors.grey,
-        bufferedColor: Colors.grey.shade400,
-      ),
-    );
+      currentChewieController = ChewieController(
+        videoPlayerController: currentVideoController!,
+        autoPlay: true,
+        looping: false,
+        allowFullScreen: true,
+        aspectRatio: currentVideoController!.value.aspectRatio,
+        showControls: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: Colors.red,
+          handleColor: Colors.red,
+          backgroundColor: Colors.grey,
+          bufferedColor: Colors.grey.shade400,
+        ),
+      );
 
-    currentVideoController!.addListener(() {
-      if (currentVideoController!.value.isInitialized &&
-          !currentVideoController!.value.isPlaying &&
-          currentVideoController!.value.position == currentVideoController!.value.duration) {
-        resetVideoPlayer();
+      currentVideoController!.addListener(() {
+        if (currentVideoController!.value.isInitialized &&
+            !currentVideoController!.value.isPlaying &&
+            currentVideoController!.value.position == currentVideoController!.value.duration) {
+          resetVideoPlayer();
+        }
+      });
+
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading video: $e')),
+        );
       }
-    });
-
-    if (mounted) setState(() {});
+      resetVideoPlayer();
+    }
   }
 
   void resetVideoPlayer() {
@@ -1148,20 +1154,44 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
                     style: const TextStyle(fontSize: 15),
                   ),
                 ),
-              if (displayData['filePath'] != null && displayData['filePath'].toString().isNotEmpty)
+              if (displayData['mediaUrl'] != null && displayData['mediaUrl'].toString().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: displayData['fileType'] == 'image'
-                        ? Image.file(
-                      File(displayData['filePath']),
+                    child: displayData['mediaType'] == 'image'
+                        ? Image.network(
+                      displayData['mediaUrl'],
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 200,
+                          color: Colors.grey[300],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(Icons.error),
+                          ),
+                        );
+                      },
                     )
-                        : displayData['fileType'] == 'video'
-                        ? buildVideoPlayer(displayData['filePath'], id)
-                        : buildDocumentPreview(displayData['filePath']),
+                        : displayData['mediaType'] == 'video'
+                        ? buildVideoPlayer(displayData['mediaUrl'], id)
+                        : buildDocumentPreview(displayData['mediaUrl']),
                   ),
                 ),
               Padding(
@@ -1205,51 +1235,10 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
     );
   }
 
-  Widget buildVideoPlayer(String videoPath, String postId) {
-    final thumbnailController = VideoPlayerController.file(File(videoPath));
-
-    return FutureBuilder(
-      future: thumbnailController.initialize(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return GestureDetector(
-            onTap: () => initializeVideoPlayer(videoPath, postId),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AspectRatio(
-                  aspectRatio: thumbnailController.value.aspectRatio,
-                  child: VideoPlayer(thumbnailController),
-                ),
-
-                if (currentPlayingVideoId != postId || currentChewieController == null)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.play_arrow,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
-
-                if (currentPlayingVideoId == postId && currentChewieController != null)
-                  AspectRatio(
-                    aspectRatio: currentVideoController!.value.aspectRatio,
-                    child: Chewie(controller: currentChewieController!),
-                  ),
-              ],
-            ),
-          );
-        } else {
-          return Container(
-            height: 200,
-            color: Colors.grey[300],
-          );
-        }
-      },
+  Widget buildVideoPlayer(String videoUrl, String postId) {
+    return VideoThumbnailPlayer(
+      videoUrl: videoUrl,
+      postId: postId,
     );
   }
 
@@ -1391,5 +1380,127 @@ class CommunitySearchDelegate extends SearchDelegate {
     return Center(
       child: Text('Search suggestions for: $query'),
     );
+  }
+}
+class VideoThumbnailPlayer extends StatefulWidget {
+  final String videoUrl;
+  final String postId;
+
+  const VideoThumbnailPlayer({
+    required this.videoUrl,
+    required this.postId,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  _VideoThumbnailPlayerState createState() => _VideoThumbnailPlayerState();
+}
+
+class _VideoThumbnailPlayerState extends State<VideoThumbnailPlayer> {
+  late VideoPlayerController _videoController;
+  ChewieController? _chewieController;
+  bool _isPlaying = false;
+  bool _isInitialized = false;
+  double? _aspectRatio;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    _videoController = VideoPlayerController.network(widget.videoUrl);
+
+    try {
+      await _videoController.initialize();
+      // Calculate aspect ratio from video dimensions
+      _aspectRatio = _videoController.value.aspectRatio;
+      // Show first frame as thumbnail
+      await _videoController.pause();
+      await _videoController.seekTo(Duration.zero);
+
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      debugPrint("Error initializing video: $e");
+      // Fallback to 16:9 if we can't determine aspect ratio
+      _aspectRatio = 16 / 9;
+      setState(() {
+        _isInitialized = false;
+      });
+    }
+  }
+
+  void _togglePlayback() {
+    if (_isPlaying) {
+      _videoController.pause();
+      setState(() => _isPlaying = false);
+    } else {
+      if (_chewieController == null) {
+        _chewieController = ChewieController(
+          videoPlayerController: _videoController,
+          autoPlay: true,
+          looping: false,
+          allowFullScreen: true,
+          aspectRatio: _aspectRatio ?? 16 / 9,
+          showControls: true,
+        );
+      }
+      _videoController.play();
+      setState(() => _isPlaying = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _togglePlayback,
+      child: AspectRatio(
+        aspectRatio: _aspectRatio ?? 16 / 9, // Use actual aspect ratio or fallback
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Video frame as thumbnail (always visible)
+            if (_isInitialized)
+              VideoPlayer(_videoController)
+            else
+              Container(
+                color: Colors.grey[300],
+                child: Center(child: CircularProgressIndicator()),
+              ),
+
+            // Play button overlay (hidden when playing)
+            if (!_isPlaying)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                padding: EdgeInsets.all(12),
+                child: Icon(
+                  Icons.play_arrow,
+                  size: 36,
+                  color: Colors.white,
+                ),
+              ),
+
+            // Chewie controls when playing
+            if (_isPlaying && _chewieController != null)
+              Positioned.fill(
+                child: Chewie(controller: _chewieController!),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    _chewieController?.dispose();
+    super.dispose();
   }
 }

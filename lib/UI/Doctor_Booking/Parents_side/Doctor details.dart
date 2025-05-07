@@ -67,7 +67,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
                     children: [
                       CircleAvatar(
                         radius: 33,
-                        backgroundImage: AssetImage(widget.doctor['image']),
+                        backgroundImage: NetworkImage(widget.doctor['image']),
                       ),
                       SizedBox(width: 16),
                       Expanded(
