@@ -165,19 +165,30 @@ class DatabaseService {
     required String address,
     required String phone,
     required String capacity,
+    String? profileImageUrl,
+    List<String>? galleryImageUrls,
   }) async {
-    try {
-      await FirebaseFirestore.instance.collection('DayCare').doc(uid).update({
-        'name': name,
-        'description': description,
-        'license': license,
-        'address': address,
-        'phone': phone,
-        'capacity': capacity,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      throw e;
+    Map<String, dynamic> updateData = {
+      'name': name,
+      'description': description,
+      'license': license,
+      'address': address,
+      'phone': phone,
+      'capacity': capacity,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (profileImageUrl != null) {
+      updateData['profileImageUrl'] = profileImageUrl;
     }
+
+    if (galleryImageUrls != null) {
+      updateData['galleryImages'] = galleryImageUrls;
+    }
+
+    await FirebaseFirestore.instance
+        .collection('DayCare')
+        .doc(uid)
+        .update(updateData);
   }
 }

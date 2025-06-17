@@ -64,26 +64,7 @@ class _AgeSelectionScreenState extends State<AgeSelectionScreen> {
                   });
                 },
               ),
-              ElevatedButton(
-                onPressed: (){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NutritionHistoryScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                ),
-                child: Text(
-                  'Prediction History',
-                  style: TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
+              SizedBox(height: 20,),
               ElevatedButton(
                 onPressed: selectedAge == null
                     ? null
@@ -97,8 +78,13 @@ class _AgeSelectionScreenState extends State<AgeSelectionScreen> {
                     ),
                   );
                 },
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: selectedAge == null ? Colors.grey : Colors.deepOrange,
+                  padding: EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 90),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 child: Text(
                   'Continue',
@@ -106,7 +92,33 @@ class _AgeSelectionScreenState extends State<AgeSelectionScreen> {
                     color: selectedAge == null ? Colors.black : Colors.white,
                   ),
                 ),
-              )
+              ),
+              SizedBox(height: 100,),
+              ElevatedButton(
+                onPressed: (){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NutritionHistoryScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 90),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(
+                  'Nutrition History',
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+
 
 
             ],

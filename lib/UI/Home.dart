@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'Community/Community.dart';
 import 'CryTranslation/cryUI.dart';
 import 'Doctor_Booking/Parents_side/Doctorlist.dart';
+import 'Milestone/milestones_screen.dart';
 import 'Nutrition Guide/SelectDate.dart';
 import 'TrakingsScreens/Milstone.dart';
 import 'TrakingsScreens/TrackersList.dart';
@@ -419,7 +420,7 @@ class _HomeState extends State<Home> {
                       "DayCare Centers",
                       Icons.maps_home_work_sharp,
                       Color(0xFFFFEBFF),
-                      Colors.red.shade600, // Shadow color
+                      Colors.red.shade600, // Shadow co
                           () {
                         Navigator.push(
                           context,
@@ -445,7 +446,7 @@ class _HomeState extends State<Home> {
                       Color(0xFFFFEBFF),
                       Colors.red.shade600, // Shadow color
                           () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>MilestonesScreen()));
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>MileStonesScreen()));
                       },
                     ),
                   ],

@@ -20,6 +20,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final ImagePicker _picker = ImagePicker();
+  String? selectedChildGender;
   final GoogleSignIn googleSignIn = GoogleSignIn(
     scopes: ['https://www.googleapis.com/auth/drive.file'],
   );
@@ -42,6 +43,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     phoneController = TextEditingController();
     childNameController = TextEditingController();
     childDobController = TextEditingController();
+    selectedChildGender = 'Boy';
   }
 
   @override
@@ -158,6 +160,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             .update({
           'name': childNameController.text,
           'dateOfBirth': selectedChildDob,
+          'gender': selectedChildGender, // Add gender to update
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
@@ -178,7 +181,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() => isUpdating = false);
     }
   }
-
   Future<void> selectChildDob(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -218,183 +220,248 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void logout() async {
-    await auth.signOut();
-    await googleSignIn.signOut();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', false);
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const Login()),
-          (Route<dynamic> route) => false,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirm Logout'),
+        content: Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await auth.signOut();
+              await googleSignIn.signOut();
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isLoggedIn', false);
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+                    (Route<dynamic> route) => false,
+              );
+            },
+            child: Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFFFEBFF),
       appBar: AppBar(
-        title: Text('User Profile', style: TextStyle(color: Color(0xFFFFEBFF))),
+        title: Text('User Profile', style: TextStyle(color: Colors.white)),
+        leading: IconButton(onPressed: (){Navigator.pop(context);}, icon: Icon(Icons.arrow_back,color: Colors.white,)),
         backgroundColor: Colors.deepOrange.shade500,
         actions: [
           if (isEditing)
             IconButton(
-              icon: Icon(Icons.save),
+              icon: Icon(Icons.save,color: Colors.white,),
               onPressed: () => ConfirmationDialog(),
             )
           else
             IconButton(
-              icon: Icon(Icons.edit),
+              icon: Icon(Icons.edit,color: Colors.white,),
               onPressed: () => setState(() => isEditing = true),
             )
         ],
         centerTitle: true,
       ),
-      body: isUpdating || isUploadingImage
-          ? Center(child: CircularProgressIndicator())
-          : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: getUserDataStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+      body: Stack(
+        children: [
+          // Main content
+          isUpdating || isUploadingImage
+              ? Center(child: CircularProgressIndicator())
+              : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: getUserDataStream(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
-          final data = snapshot.data!.data() ?? {};
-          if (!isEditing) {
-            nameController.text = data['name'] ?? '';
-            phoneController.text = data['phone'] ?? '';
-          }
+              final data = snapshot.data!.data() ?? {};
+              if (!isEditing) {
+                nameController.text = data['name'] ?? '';
+                phoneController.text = data['phone'] ?? '';
+              }
 
-          return Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: ListView(
-              children: [
-                // User Profile Section
-                GestureDetector(
-                  onTap: isEditing ? _pickImage : null,
-                  child: Center(
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 70,
-                          backgroundImage: pickedImage != null
-                              ? FileImage(pickedImage!)
-                              : (data['photoUrl'] != null
-                              ? NetworkImage(data['photoUrl'])
-                              : null),
-                          child: pickedImage == null && data['photoUrl'] == null
-                              ? Text(
-                            data['name']?.isNotEmpty == true
-                                ? data['name'][0].toUpperCase()
-                                : '?',
-                            style: TextStyle(fontSize: 40),
-                          )
-                              : null,
-                        ),
-                        if (isEditing)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.deepOrange,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.edit, color: Colors.white, size: 20),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // User Profile Section
+                    GestureDetector(
+                      onTap: isEditing ? _pickImage : null,
+                      child: Center(
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 70,
+                              backgroundImage: pickedImage != null
+                                  ? FileImage(pickedImage!)
+                                  : (data['photoUrl'] != null
+                                  ? NetworkImage(data['photoUrl'])
+                                  : null),
+                              child: pickedImage == null && data['photoUrl'] == null
+                                  ? Text(
+                                data['name']?.isNotEmpty == true
+                                    ? data['name'][0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(fontSize: 40),
+                              )
+                                  : null,
                             ),
-                          ),
-                      ],
+                            if (isEditing)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.deepOrange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.edit, color: Colors.white, size: 20),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                SizedBox(height: 20),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Name'),
-                  enabled: isEditing,
-                ),
-                SizedBox(height: 10),
-                TextField(
-                  controller: TextEditingController(text: data['email'] ?? ''),
-                  decoration: InputDecoration(labelText: 'Email'),
-                  readOnly: true,
-                ),
-                SizedBox(height: 10),
-                TextField(
-                  controller: phoneController,
-                  decoration: InputDecoration(labelText: 'Phone'),
-                  enabled: isEditing,
-                  keyboardType: TextInputType.phone,
-                ),
-                SizedBox(height: 20),
+                    SizedBox(height: 20),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Name'),
+                      enabled: isEditing,
+                    ),
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: TextEditingController(text: data['email'] ?? ''),
+                      decoration: InputDecoration(labelText: 'Email'),
+                      readOnly: true,
+                    ),
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: phoneController,
+                      decoration: InputDecoration(labelText: 'Phone'),
+                      enabled: isEditing,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: 20),
 
-                // Child Details Section
-                Text(
-                  'Child Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange.shade500,
-                  ),
+                    // Child Details Section
+                    Text(
+                      'Child Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepOrange.shade500,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: getChildDataStream(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+
+                        final children = snapshot.data!.docs;
+                        if (children.isEmpty) {
+                          return Text('No child data found.');
+                        }
+
+                        final childData = children.first.data();
+                        childId = children.first.id;
+                        final name = childData['name'] ?? 'No Name';
+                        final dob = childData['dateOfBirth']?.toDate();
+                        final gender = childData['gender'] ?? 'Boy';
+
+                        if (!isEditing) {
+                          childNameController.text = name;
+                          selectedChildDob = dob;
+                          selectedChildGender = gender;
+                          childDobController.text = dob != null
+                              ? "${dob.day}/${dob.month}/${dob.year}"
+                              : '';
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: childNameController,
+                              decoration: InputDecoration(labelText: 'Child Name'),
+                              enabled: isEditing,
+                            ),
+                            SizedBox(height: 10),
+                            TextField(
+                              controller: childDobController,
+                              decoration: InputDecoration(labelText: 'Date of Birth'),
+                              readOnly: true,
+                              onTap: isEditing ? () => selectChildDob(context) : null,
+                            ),
+                            SizedBox(height: 10),
+                            // Gender Dropdown
+                            DropdownButtonFormField<String>(
+                              value: selectedChildGender,
+                              decoration: InputDecoration(
+                                labelText: 'Gender',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: ['Boy', 'Girl', 'Prefer not to say']
+                                  .map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                              onChanged: isEditing
+                                  ? (String? newValue) {
+                                setState(() {
+                                  selectedChildGender = newValue;
+                                });
+                              }
+                                  : null,
+                            ),
+                            SizedBox(height: 80), // Space for the logout button
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                SizedBox(height: 10),
-                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: getChildDataStream(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+              );
+            },
+          ),
 
-                    final children = snapshot.data!.docs;
-                    if (children.isEmpty) {
-                      return Text('No child data found.');
-                    }
-
-                    final childData = children.first.data();
-                    childId = children.first.id;
-                    final name = childData['name'] ?? 'No Name';
-                    final dob = childData['dateOfBirth']?.toDate();
-
-                    if (!isEditing) {
-                      childNameController.text = name;
-                      selectedChildDob = dob;
-                      childDobController.text = dob != null
-                          ? "${dob.day}/${dob.month}/${dob.year}"
-                          : '';
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                          controller: childNameController,
-                          decoration: InputDecoration(labelText: 'Child Name'),
-                          enabled: isEditing,
-                        ),
-                        SizedBox(height: 10),
-                        TextField(
-                          controller: childDobController,
-                          decoration: InputDecoration(labelText: 'Date of Birth'),
-                          readOnly: true,
-                          onTap: isEditing ? () => selectChildDob(context) : null,
-                        ),
-                        SizedBox(height: 20),
-                      ],
-                    );
-                  },
+          // Logout Button (positioned at bottom)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 10,
+            child: ElevatedButton(
+              onPressed: logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange.shade500,
+                padding: EdgeInsets.symmetric(vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-
-                // Logout Button
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: logout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange.shade500,
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                  ),
-                  child: Text('Logout', style: TextStyle(color: Color(0xFFFFEBFF))),
+              ),
+              child: Text(
+                'Logout',
+                style: TextStyle(
+                  color: Color(0xFFFFEBFF),
+                  fontSize: 18,
                 ),
-              ],
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

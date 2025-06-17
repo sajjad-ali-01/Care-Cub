@@ -191,6 +191,10 @@ class _DeficiencyAssessmentScreenState extends State<DeficiencyAssessmentScreen>
                                 value: 'No',
                                 child: Text('No'),
                               ),
+                              DropdownMenuItem(
+                                value : 'None',
+                                child:  Text('None'),
+                              )
                             ],
                             onChanged: (value) {
                               setState(() {

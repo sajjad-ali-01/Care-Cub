@@ -249,7 +249,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
                     ),
                     Row(
                       children: [
-                        Icon(Icons.star, color: Colors.blueAccent.shade700, size: 24),
+                        Icon(Icons.star, color: Colors.blue.shade900, size: 24),
                         SizedBox(width: 4),
                         Text(
                           overallRating.toStringAsFixed(1),

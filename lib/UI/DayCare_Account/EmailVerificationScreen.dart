@@ -6,15 +6,10 @@ import 'package:carecub/UI/User/Login.dart';
 import 'ThankyouScreen.dart';
 import '../../Logic/Users/User_Deletion.dart';
 
-
-
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
   late User? user;
   final String password;
-
-
-
   EmailVerificationScreen({
     Key? key,
     required this.email,

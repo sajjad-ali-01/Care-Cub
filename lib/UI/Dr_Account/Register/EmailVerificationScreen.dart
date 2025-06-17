@@ -2,7 +2,7 @@ import 'package:carecub/Logic/Users/Functions.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'package:carecub/UI/User/Login.dart';
+import 'package:carecub/UI/Dr_Account/Login.dart';
 import '../../../Database/DatabaseServices.dart';
 import '../../../Logic/Users/User_Deletion.dart';
 import 'Professional_Info.dart';
@@ -106,7 +106,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     if (isVerified) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => Login()),
+      MaterialPageRoute(builder: (context) => DrLogin()),
     );
   }
   @override
@@ -201,7 +201,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         User_Deletion.reauthenticateAndDelete(widget.password);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => Login()),
+                          MaterialPageRoute(builder: (context) => DrLogin()),
                         );
                       },
                       style: ElevatedButton.styleFrom(

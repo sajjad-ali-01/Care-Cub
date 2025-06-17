@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedSplashScreen(
-      splash: Image.asset('assets/images/CareCub_Animation.gif'),
+      splash: Image.asset('assets/images/CareCub_Animations.gif'),
       splashIconSize: 2500,
       centered: true,
       nextScreen: nextScreen,

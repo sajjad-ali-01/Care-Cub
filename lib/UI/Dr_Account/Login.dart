@@ -112,10 +112,15 @@ class _DrLoginState extends State<DrLogin> {
                             color: Colors.deepOrange),
                       ),
                       SizedBox(height: 20),
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundImage:
-                        AssetImage('assets/images/careCub_Logo.jpg'),
+                      SizedBox(
+                        width: 180,
+                        height: 120,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                       SizedBox(height: 10),
                       Text(

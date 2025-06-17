@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:carecub/UI/BottomNavigationBar.dart';
 import 'package:carecub/UI/Community/questions.dart';
 import 'package:carecub/UI/Splash%20screen.dart';
 import 'package:chewie/chewie.dart';
@@ -12,7 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import '../Doctor_Booking/Doctor_Side/DoctorHome.dart';
-import '../Home.dart';
+
 import 'AnswerScreen.dart';
 import 'comments.dart';
 import 'notifications.dart';
@@ -634,7 +635,7 @@ class _CommunityHomePageState extends State<CommunityHomePage> {
                 if (isDrLoggedIn) {
                   return DoctorDashboard();
                 } else if (isLoggedIn) {
-                  return Home();
+                  return Tabs();
                 } else {
                   return SplashScreen();
                 }

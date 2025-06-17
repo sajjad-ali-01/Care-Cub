@@ -1,6 +1,7 @@
 import 'package:carecub/UI/User/Login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../../Logic/Users/Functions.dart';
 import 'EmailVerificationScreen.dart';
 
@@ -55,9 +56,7 @@ class _RegisterState extends State<Register> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      showToast(message: "Error signing in. Email already exist or wrong information");
     } finally {
       setState(() => isLoading = false);
     }

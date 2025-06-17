@@ -1,0 +1,2 @@
+D:/CareCub/carecub/android/app/.cxx/Debug/6q6k3p5r/x86/CMakeFiles/edit_cache.dir
+D:/CareCub/carecub/android/app/.cxx/Debug/6q6k3p5r/x86/CMakeFiles/rebuild_cache.dir
