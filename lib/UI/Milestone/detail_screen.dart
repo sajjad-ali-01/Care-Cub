@@ -38,8 +38,9 @@ class _DetailScreenState extends State<DetailScreen> {
   final Map<String, Map<String, String>> milestoneMedia = {
     // 0-2 months
     'Watches you as you move': {'youtubeUrl': 'https://youtu.be/5AKUzlW7pcw'},
-    'Looks at a toy for several seconds': {'imageUrl': 'https://www.cdc.gov/ncbddd/actearly/milestones/images/2-months_Calms-down-when-spoken-to-or-picked-up-1.png'},
+    'Looks at a toy for several seconds': {'imageUrl': 'https://www.cdc.gov/ncbddd/actearly/milestones/images/2-Months_Looks-at-a-toy-for-several-seconds.jpg'},
     'Babbles': {'youtubeUrl': 'https://youtu.be/nFVh8cPr9Dk'},
+    'Crawling': {'youtubeUrl': 'https://youtu.be/nFVh8cPr9Dk'},
     'Responds to sounds': {'youtubeUrl': 'https://youtu.be/ZQ2tm9mvDG4'},
     'Moves both arms and both legs': {'youtubeUrl': 'https://youtu.be/R7kQMd8M3U4'},
     'Holds head up when on tummy': {'imageUrl': 'https://www.cdc.gov/ncbddd/actearly/milestones/images/2-months_Holds-head-up-when-on-tummy.png'},
@@ -193,7 +194,8 @@ class _DetailScreenState extends State<DetailScreen> {
                         'Cognitive Milestones', Icons.lightbulb_outline,
                         Colors.green, [
                       'Watches you as you move',
-                      'Looks at a toy for several seconds'
+                      'Looks at a toy for several seconds',
+                      'Running'
                     ]),
                     _buildExpandableTile('Language/Communication Milestones',
                         Icons.chat_bubble_outline, Colors.blue, [

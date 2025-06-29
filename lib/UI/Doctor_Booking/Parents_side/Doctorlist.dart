@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../Database/DataBaseReadServices.dart';
+
 import 'BookingScreen.dart';
 import 'Doctor details.dart';
 import 'MyBookings.dart';
@@ -16,6 +17,16 @@ class _DoctorListState extends State<Doctorlist> {
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
   String _searchQuery = '';
+
+  void _toggleSearch() {
+    setState(() {
+      isSearching = !isSearching;
+      if (!isSearching) {
+        searchController.clear();
+        _searchQuery = '';
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -79,15 +90,7 @@ class _DoctorListState extends State<Doctorlist> {
         actions: [
           IconButton(
             icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                isSearching = !isSearching;
-                if (!isSearching) {
-                  searchController.clear();
-                  _searchQuery = '';
-                }
-              });
-            },
+            onPressed: _toggleSearch,
           ),
         ],
       ),
@@ -116,8 +119,8 @@ class _DoctorListState extends State<Doctorlist> {
               SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
-                  child: Text("Doctors Near Me", style: TextStyle(fontSize: 15)),
+                  onPressed: _toggleSearch, // Use the toggle method here
+                  child: Text("Search Doctor", style: TextStyle(fontSize: 15)),
                   style: OutlinedButton.styleFrom(shape: StadiumBorder()),
                 ),
               ),
@@ -147,7 +150,7 @@ class _DoctorListState extends State<Doctorlist> {
 
                 // Filter doctors locally based on search query
                 final filteredDoctors = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
+                  final data = doc.data() as Map<String,dynamic>;
                   final name = data['name']?.toString().toLowerCase() ?? '';
 
                   // Return true if search query is empty or name matches
@@ -508,7 +511,7 @@ class _DoctorCardState extends State<DoctorCard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Experience: ${widget.experience} years",
+                    "Experience: ${widget.experience}",
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                   ),
                   StreamBuilder<double>(
@@ -551,7 +554,7 @@ class _DoctorCardState extends State<DoctorCard> {
               ),
               SizedBox(height: 10),
               Container(
-                height: 100,
+                height: 120,
                 child: isLoading
                     ? Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,
@@ -656,13 +659,17 @@ class _DoctorCardState extends State<DoctorCard> {
                             children: [
                               Icon(Icons.local_hospital_sharp, color: Colors.deepOrange, size: 20),
                               SizedBox(width: 8),
-                              Text(
-                                clinic['ClinicName'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
+                              Expanded(
+                                child: Text(
+                                  clinic['ClinicName'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 2,  // Allow text to span up to 2 lines
+                                  overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
                                 ),
-                              ),
+                              )
                             ],
                           ),
                           SizedBox(height: 2),
@@ -670,13 +677,19 @@ class _DoctorCardState extends State<DoctorCard> {
                             children: [
                               Icon(Icons.location_on, color: Colors.blue, size: 15),
                               SizedBox(width: 8),
-                              Text(
-                                clinic['Address'],
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 13,
+                              Expanded(
+                                child: Text(
+                                  clinic['Address'],
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 2,  // Allow text to span up to 2 lines
+                                  overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
                                 ),
-                              ),
+                              )
+
+
                             ],
                           ),
                           Row(
@@ -704,7 +717,7 @@ class _DoctorCardState extends State<DoctorCard> {
                                 ),
                               ),
                               Text(
-                                'Book online & Get 10% OFF',
+                                'Pay online & Get 10% OFF',
                                 style: TextStyle(
                                   color: Colors.green.shade600,
                                   fontSize: 12,
@@ -734,16 +747,18 @@ class _DoctorCardState extends State<DoctorCard> {
                             builder: (context) => BookingScreen(
                               doctorId: widget.doctorId,
                               name: widget.name,
-                              clinicName: clinics[0]['ClinicName'],
                               Image: widget.image,
                               Specialization: widget.specialization,
-                              locations: clinics[0]['Location'],
-                              Address: clinics[0]['Address'],
-                              availability: clinics[0]['Availability'],
                               Secondary_Specialization: widget.secondary_specialization,
+                               // Make sure this exists
+                              Address: clinics[0]['Address'],
                               qualification: widget.EDU_Info.isNotEmpty
-                                  ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                                  ? widget.EDU_Info.join(", ")
                                   : 'No education info available',
+                              availability: clinics[0]['Availability'],
+                              clinicName: clinics[0]['ClinicName'],
+                              fees: clinics[0]['Fees'],
+                              clinicLocation: clinics[0]['Location'] as GeoPoint, // This is crucial
                             ),
                           ),
                         );
@@ -839,16 +854,17 @@ class _DoctorCardState extends State<DoctorCard> {
                           builder: (context) => BookingScreen(
                             doctorId: widget.doctorId,
                             name: widget.name,
-                            clinicName: clinic['ClinicName'],
                             Image: widget.image,
                             Specialization: widget.specialization,
-                            locations: clinic['Location'],
-                            Address: clinic['Address'],
-                            availability: clinic['Availability'],
                             Secondary_Specialization: widget.secondary_specialization,
+                            Address: clinic['Address'],
                             qualification: widget.EDU_Info.isNotEmpty
-                          ? widget.EDU_Info.join(", ")
+                                ? widget.EDU_Info.join(", ")
                                 : 'No education info available',
+                            availability: clinic['Availability'],
+                            clinicName: clinic['ClinicName'],
+                            fees: clinic['Fees'],
+                            clinicLocation: clinic['Location'], // This is crucial
                           ),
                         ),
                       );

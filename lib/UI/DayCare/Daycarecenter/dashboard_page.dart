@@ -117,7 +117,7 @@ class DaycareAppointmentsPage extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('DaycareBookings')
           .where('daycareId', isEqualTo: daycareId)
-          .where('status', isEqualTo: 'pending')
+          .where('status', isEqualTo: 'Pending')
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

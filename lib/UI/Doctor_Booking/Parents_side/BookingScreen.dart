@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class BookingScreen extends StatefulWidget {
   final String doctorId;
@@ -9,24 +10,28 @@ class BookingScreen extends StatefulWidget {
   final String Image;
   final String Specialization;
   final String Secondary_Specialization;
-  final String locations;
+
   final String Address;
   final String qualification;
+  final String fees;
   final Map<String, dynamic> availability;
   final String clinicName;
+  final GeoPoint clinicLocation; // Added clinic location
 
-  BookingScreen({
+  const BookingScreen({
+    Key? key,
     required this.doctorId,
     required this.name,
     required this.Image,
     required this.Specialization,
     required this.Secondary_Specialization,
-    required this.locations,
     required this.Address,
     required this.qualification,
     required this.availability,
+    required this.fees,
     required this.clinicName,
-  });
+    required this.clinicLocation, // Added to constructor
+  }) : super(key: key);
 
   @override
   _BookingScreenState createState() => _BookingScreenState();
@@ -40,9 +45,10 @@ class _BookingScreenState extends State<BookingScreen> {
   final TextEditingController problem = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
-  final TextEditingController dobController = TextEditingController(); // New controller for DOB
+  final TextEditingController dobController = TextEditingController();
   String? selectedGender;
   DateTime? selectedDob;
+  Stream<QuerySnapshot>? _bookingsStream;
 
   String _getDayName(int weekday) {
     switch (weekday) {
@@ -56,17 +62,18 @@ class _BookingScreenState extends State<BookingScreen> {
       default: return '';
     }
   }
+
   Future<void> selectDob(BuildContext context) async {
     final DateTime now = DateTime.now();
     final DateTime tenYearsAgo = DateTime(now.year - 10, now.month, now.day);
-    final DateTime firstAllowedDate = DateTime(now.year - 10, 1, 1); // January 1st of 10 years ago
+    final DateTime firstAllowedDate = DateTime(now.year - 10, 1, 1);
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: tenYearsAgo, // Default to 10 years ago
-      firstDate: firstAllowedDate, // Only allow dates from 10 years ago
-      lastDate: now, // Up to current date
-      initialDatePickerMode: DatePickerMode.year, // Start with year selection
+      initialDate: tenYearsAgo,
+      firstDate: firstAllowedDate,
+      lastDate: now,
+      initialDatePickerMode: DatePickerMode.year,
       helpText: 'Select child\'s date of birth (max 10 years old)',
       fieldHintText: 'DD/MM/YYYY',
       errorFormatText: 'Enter valid date',
@@ -80,6 +87,7 @@ class _BookingScreenState extends State<BookingScreen> {
       });
     }
   }
+
   TimeOfDay parseTime(String timeStr) {
     try {
       final format = DateFormat('h:mm a');
@@ -102,7 +110,6 @@ class _BookingScreenState extends State<BookingScreen> {
         (current.hour == end.hour && current.minute < end.minute)) {
       slots.add(current.format(context));
 
-      // Add 20 minutes
       final totalMinutes = current.hour * 60 + current.minute + 20;
       current = TimeOfDay(
         hour: totalMinutes ~/ 60,
@@ -112,15 +119,11 @@ class _BookingScreenState extends State<BookingScreen> {
 
     return slots;
   }
-  
-  Stream<QuerySnapshot>? _bookingsStream;
 
   void DatePicker() async {
-    // Find the first available date starting from today
     DateTime initialDate = DateTime.now();
     int attempts = 0;
 
-    // Ensure we don't loop indefinitely
     while (attempts < 365) {
       final dayName = _getDayName(initialDate.weekday);
       if (widget.availability.containsKey(dayName)) {
@@ -132,7 +135,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: initialDate,  // Use the calculated initial date
+      initialDate: initialDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(Duration(days: 365)),
       selectableDayPredicate: (date) {
@@ -144,9 +147,6 @@ class _BookingScreenState extends State<BookingScreen> {
     if (pickedDate != null && mounted) {
       final dayName = _getDayName(pickedDate.weekday);
       if (widget.availability.containsKey(dayName)) {
-        final daySchedule = widget.availability[dayName];
-
-        // Set up the real-time bookings stream
         final selectedDay = DateTime(pickedDate.year, pickedDate.month, pickedDate.day);
         _bookingsStream = FirebaseFirestore.instance
             .collection('Bookings')
@@ -163,6 +163,15 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
+  int calculateAge(DateTime birthDate) {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +179,10 @@ class _BookingScreenState extends State<BookingScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         backgroundColor: Colors.deepOrange.shade600,
-        leading: IconButton(onPressed: (){Navigator.pop(context);}, icon: Icon(Icons.arrow_back,color: Colors.white,)),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+        ),
         title: Text('Confirm Booking', style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
@@ -181,7 +193,9 @@ class _BookingScreenState extends State<BookingScreen> {
             Card(
               color: Colors.white,
               elevation: 5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Column(
@@ -198,40 +212,85 @@ class _BookingScreenState extends State<BookingScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(widget.name,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              Text('${widget.qualification}, ${widget.Specialization}',
-                                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                              Text(
+                                widget.name,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '${widget.qualification}, ${widget.Specialization}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                     SizedBox(height: 10),
-                        Column(
+                    Column(
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.green),
-                                Text(widget.clinicName, style: TextStyle(fontSize: 16)),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(Icons.location_on, color: Colors.red),
-                                Text(widget.Address, style: TextStyle(fontSize: 16),),
-                                Spacer(),
-                                ElevatedButton(onPressed: (){}, child: Text("See on map"))
-                              ],
+                            Icon(Icons.check_circle, color: Colors.green),
+                            Expanded(
+                              child: Text(
+                                widget.clinicName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 2,  // Allow text to span up to 2 lines
+                                overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
+                              ),
                             )
                           ],
-                        )
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Icon(Icons.location_on, color: Colors.red),
+                            Expanded(
+                              child: Text(
+                                widget.Address,
+                                style: TextStyle(fontSize: 15),
+                              ),
+
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ClinicLocationScreen(
+                                      location: LatLng(
+                                        widget.clinicLocation.latitude,
+                                        widget.clinicLocation.longitude,
+                                      ),
+                                      clinicName: widget.clinicName,
+                                      address: widget.Address,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange.shade400,
+                              ),
+                              child: Text("See on map",style: TextStyle(color: Colors.white),),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
+                  ],
                 ),
               ),
-
+            ),
             const SizedBox(height: 20),
             TextField(
               controller: childNameController,
@@ -257,7 +316,6 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             const SizedBox(height: 10),
             TextField(
-
               controller: contactController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
@@ -274,7 +332,6 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // Add Date of Birth field
             GestureDetector(
               onTap: () => selectDob(context),
               child: AbsorbPointer(
@@ -304,35 +361,37 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             const SizedBox(height: 20),
             if (selectedDate != null) ...[
-              Text('Available Time Slots:', /* ... */),
+              Text(
+                'Available Time Slots:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
               SizedBox(height: 10),
               StreamBuilder<QuerySnapshot>(
                 stream: _bookingsStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
+                    return Center(child: CircularProgressIndicator());
                   }
 
                   if (snapshot.hasError) {
                     return Text('Error loading slots');
                   }
 
-                  // Get booked times
                   final bookedSlots = snapshot.data?.docs
                       .map((doc) => doc['time'] as String)
-                      .toList() ?? [];
+                      .toList() ??
+                      [];
 
-                  // Generate all possible slots
                   final dayName = _getDayName(selectedDate!.weekday);
                   final daySchedule = widget.availability[dayName];
                   final allSlots = generateTimeSlots(
-                      daySchedule['start'],
-                      daySchedule['end']
+                    daySchedule['start'],
+                    daySchedule['end'],
                   );
 
-                  // Filter available slots
-                  final availableSlots = allSlots.where(
-                          (slot) => !bookedSlots.contains(slot)).toList();
+                  final availableSlots = allSlots
+                      .where((slot) => !bookedSlots.contains(slot))
+                      .toList();
 
                   return Wrap(
                     spacing: 10,
@@ -342,7 +401,8 @@ class _BookingScreenState extends State<BookingScreen> {
                         label: Text(time),
                         selected: selectedTime == time,
                         selectedColor: Colors.deepOrange.shade400,
-                        onSelected: (selected) => setState(() => selectedTime = selected ? time : null),
+                        onSelected: (selected) =>
+                            setState(() => selectedTime = selected ? time : null),
                       );
                     }).toList(),
                   );
@@ -351,8 +411,10 @@ class _BookingScreenState extends State<BookingScreen> {
             ] else
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
-                child: Text('Select a date to view available time slots',
-                    style: TextStyle(color: Colors.grey)),
+                child: Text(
+                  'Select a date to view available time slots',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
             const SizedBox(height: 30),
             Center(
@@ -363,8 +425,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       selectedGender == null ||
                       selectedDate == null ||
                       selectedTime == null ||
-                      selectedDob == null)
-                  {
+                      selectedDob == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Please fill all required fields')),
                     );
@@ -380,11 +441,12 @@ class _BookingScreenState extends State<BookingScreen> {
                   }
 
                   try {
+                    // In the save booking function in BookingScreen:
                     await FirebaseFirestore.instance.collection('Bookings').add({
                       'userId': user.uid,
                       'doctorId': widget.doctorId,
                       'childName': childNameController.text,
-                      'description':problem.text,
+                      'description': problem.text,
                       'gender': selectedGender,
                       'contactNumber': contactController.text,
                       'date': Timestamp.fromDate(selectedDate!),
@@ -394,13 +456,16 @@ class _BookingScreenState extends State<BookingScreen> {
                       'doctorName': widget.name,
                       'clinicAddress': widget.Address,
                       'clinicName': widget.clinicName,
-                      'dob': Timestamp.fromDate(selectedDob!), // Add DOB to database
-                      'age': calculateAge(selectedDob!), // Calculate and store age
+                      'fees': widget.fees,
+                      'dob': Timestamp.fromDate(selectedDob!),
+                      'age': calculateAge(selectedDob!),
+                      'clinicLocation': widget.clinicLocation, // Add this line
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Booking confirmed for ${childNameController.text}'),
+                        content:
+                        Text('Booking confirmed for ${childNameController.text}'),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -415,10 +480,13 @@ class _BookingScreenState extends State<BookingScreen> {
                   backgroundColor: Colors.deepOrange.shade400,
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                child: Text('Confirm Booking',
-                    style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: Text(
+                  'Confirm Booking',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -426,14 +494,44 @@ class _BookingScreenState extends State<BookingScreen> {
       ),
     );
   }
-  // Helper method to calculate age from DOB
-  int calculateAge(DateTime birthDate) {
-    final now = DateTime.now();
-    int age = now.year - birthDate.year;
-    if (now.month < birthDate.month ||
-        (now.month == birthDate.month && now.day < birthDate.day)) {
-      age--;
-    }
-    return age;
+}
+
+class ClinicLocationScreen extends StatelessWidget {
+  final LatLng location;
+  final String clinicName;
+  final String address;
+
+  const ClinicLocationScreen({
+    Key? key,
+    required this.location,
+    required this.clinicName,
+    required this.address,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Clinic Location'),
+      ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: location,
+          zoom: 15,
+        ),
+        markers: {
+          Marker(
+            markerId: MarkerId('clinicLocation'),
+            position: location,
+            infoWindow: InfoWindow(
+              title: clinicName,
+              snippet: address,
+            ),
+          ),
+        },
+        myLocationEnabled: true,
+        myLocationButtonEnabled: true,
+      ),
+    );
   }
 }

@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
 
 
     <application
@@ -29,6 +33,12 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
+<!--            <meta-data-->
+<!--                android:name="com.google.android.geo.API_KEY"-->
+<!--                android:value="AIzaSyCkuhYabOlMBvuzSI0Vrm5X0CDMI8YWTAo"/>-->
+            <meta-data
+                android:name="flutterEmbedding"
+                android:value="2" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -39,5 +49,8 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyA66TAtjEwtJx8MPxCc9jKpjR8AyByELIA"/>
+
     </application>
 </manifest>

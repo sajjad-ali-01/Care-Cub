@@ -5,281 +5,450 @@ import 'package:flutter/material.dart';
 import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
 import 'package:audio_waveforms/audio_waveforms.dart';
 
-class CryPredictionScreen extends StatefulWidget {
+import 'cryUI.dart';
+class ResultsScreen extends StatefulWidget {
   final String audioPath;
+  final Map<String, double> predictionResults;
 
-  const CryPredictionScreen({super.key, required this.audioPath});
+
+  const ResultsScreen({
+    super.key,
+    required this.audioPath,
+    required this.predictionResults,
+  });
 
   @override
-  State<CryPredictionScreen> createState() => _CryPredictionScreenState();
+  State<ResultsScreen> createState() => _ResultsScreenState();
 }
 
-class _CryPredictionScreenState extends State<CryPredictionScreen> {
-  late tfl.Interpreter _interpreter;
-  List<String> _labels = [];
-  bool _isLoading = true;
-  Map<String, double> _predictions = {};
-  String _errorMessage = '';
-  List<double>? _audioSamples;
-
-  final List<String> _myClasses = [
-    'belly_pain',
-    'burping',
-    'discomfort',
-    'hungry',
-    'tired',
-    'others'
-  ];
+class _ResultsScreenState extends State<ResultsScreen> {
+  String? _selectedFilter;
+  bool _feedbackSubmitted = false;
 
   @override
   void initState() {
     super.initState();
-    _initModelAndProcessAudio();
   }
 
-  Future<void> _initModelAndProcessAudio() async {
-    try {
-      // 1. Verify WAV file exists
-      final audioFile = File(widget.audioPath);
-      if (!await audioFile.exists()) {
-        throw Exception('Audio file not found at ${widget.audioPath}');
-      }
-
-      // 2. Load model and labels
-      await _loadModel();
-
-      // 3. Process audio and run inference
-      await _processAndClassifyAudio(audioFile);
-    } catch (e) {
-      _handleError(e);
+  // Method to get suggestions for each condition
+  List<String> _getSuggestions(String condition) {
+    switch (condition) {
+      case 'Discomfort':
+        return [
+          'Check diaper and clothing for tightness or irritation',
+          'Try different holding positions to relieve pressure',
+          'Gently massage baby\'s back or tummy'
+        ];
+      case 'Burping':
+        return [
+          'Hold baby upright against your shoulder',
+          'Pat or rub back gently in circular motions',
+          'Try walking while holding baby upright'
+        ];
+      case 'Belly Pain':
+        return [
+          'Do bicycle leg movements to relieve gas',
+          'Apply gentle tummy massage clockwise',
+          'Consult with the Doctor'
+        ];
+      case 'Hungry':
+        return [
+          'Offer feeding if it\'s been 2-3 hours',
+          'Ensure proper latch if breastfeeding'
+        ];
+      case 'Tired':
+        return [
+          'Swaddle snugly to mimic womb feeling',
+          'Reduce stimulation and dim lights',
+          'Try gentle rocking or white noise'
+        ];
+      default:
+        return [
+          'The provided voice is not for the baby cry please record again'
+        ];
     }
   }
 
-  Future<void> _loadModel() async {
-    try {
-      // Load model with debugging
-      print('Loading TensorFlow Lite model...');
-      final interpreterOptions = tfl.InterpreterOptions();
-      _interpreter = await tfl.Interpreter.fromAsset(
-        'assets/model.tflite',
-        options: interpreterOptions,
-      );
+  Widget _getCategoryAvatar(String category, {double size = 40}) {
+    String imagePath;
+    Color color;
 
-      // Print model details
-      print('Model input details: ${_interpreter.getInputTensor(0)}');
-      print('Model output details: ${_interpreter.getOutputTensor(0)}');
-
-      // Load labels
-      final labelTxt = await DefaultAssetBundle.of(context).loadString('assets/labels.txt');
-      _labels = labelTxt.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-      print('Loaded ${_labels.length} labels');
-    } catch (e) {
-      throw Exception('Failed to load model: $e');
-    }
-  }
-
-  Future<void> _processAndClassifyAudio(File audioFile) async {
-    try {
-      // 1. Read and validate WAV file
-      print('Processing WAV file...');
-      final bytes = await audioFile.readAsBytes();
-      if (bytes.length < 44) throw Exception('Invalid WAV file (too short)');
-
-      // 2. Extract audio data from WAV (skip header)
-      final audioData = _extractAudioDataFromWav(bytes);
-      print('Extracted ${audioData.length} samples');
-
-      // 3. Preprocess audio
-      final processedAudio = _preprocessAudio(audioData);
-      _audioSamples = processedAudio; // Store for visualization
-
-      // 4. Prepare model input
-      final inputShape = _interpreter.getInputTensor(0).shape;
-      final input = _prepareModelInput(processedAudio, inputShape);
-
-      // 5. Run inference
-      print('Running inference...');
-      final output = List.filled(
-        _interpreter.getOutputTensor(0).shape.reduce((a, b) => a * b),
-        0.0,
-      ).reshape(_interpreter.getOutputTensor(0).shape);
-
-      _interpreter.run(input, output);
-
-      // 6. Process results
-      _processInferenceResults(output[0]);
-    } catch (e) {
-      throw Exception('Audio processing failed: $e');
-    }
-  }
-
-  List<double> _extractAudioDataFromWav(Uint8List bytes) {
-    // Skip WAV header (first 44 bytes) and convert to samples
-    final dataStart = 44;
-    final dataBytes = bytes.sublist(dataStart);
-
-    // Convert bytes to 16-bit PCM samples (-32768 to 32767)
-    final buffer = Int16List.view(dataBytes.buffer);
-    return buffer.map((sample) => sample / 32768.0).toList();
-  }
-
-  List<double> _preprocessAudio(List<double> samples) {
-    // 1. Resample if needed (assuming original is 16kHz)
-    // 2. Normalize
-    final maxVal = samples.fold(0.0, (prev, e) => max(prev, e.abs()));
-    return maxVal > 0 ? samples.map((e) => e / maxVal).toList() : samples;
-  }
-
-  List<List<double>> _prepareModelInput(List<double> audio, List<int> shape) {
-    if (shape.length != 2) throw Exception('Expected 2D input shape');
-
-    final targetLength = shape[1];
-    final input = List<double>.filled(targetLength, 0.0);
-
-    // Copy or pad audio to match model input length
-    final length = min(audio.length, targetLength);
-    for (var i = 0; i < length; i++) {
-      input[i] = audio[i].clamp(-1.0, 1.0);
+    switch (category) {
+      case 'Belly Pain':
+        imagePath = "assets/images/belly_pain.png"; // Update with your actual image path
+        color = Colors.redAccent;
+        break;
+      case 'Burping':
+        imagePath = "assets/images/burping.png"; // Update with your actual image path
+        color = Colors.orangeAccent;
+        break;
+      case 'Discomfort':
+        imagePath = "assets/images/discomfort.png"; // Update with your actual image path
+        color = Colors.blue;
+        break;
+      case 'Hungry':
+        imagePath = "assets/images/feed.png"; // Update with your actual image path
+        color = Colors.greenAccent;
+        break;
+      case 'Tired':
+        imagePath = "assets/images/tired.png"; // Update with your actual image path
+        color = Colors.purpleAccent;
+        break;
+      default:
+        imagePath = "assets/images/default.png"; // Update with your actual image path
+        color = Colors.grey;
     }
 
-    return [input]; // Add batch dimension
-  }
-
-  void _processInferenceResults(List<double> output) {
-    final probabilities = _softmax(output);
-    final results = <String, double>{};
-
-    for (var i = 0; i < min(_myClasses.length, probabilities.length); i++) {
-      results[_myClasses[i]] = probabilities[i] * 100;
-    }
-
-    setState(() {
-      _predictions = results;
-      _isLoading = false;
-    });
-
-    print('Inference results: $results');
-  }
-
-  List<double> _softmax(List<double> input) {
-    final expValues = input.map((e) => exp(e)).toList();
-    final sumExp = expValues.reduce((a, b) => a + b);
-    return expValues.map((e) => e / sumExp).toList();
-  }
-
-  void _handleError(dynamic error) {
-    print('Error: $error');
-    setState(() {
-      _isLoading = false;
-      _errorMessage = error.toString();
-    });
-  }
-
-  String _getSuggestion() {
-    if (_predictions.isEmpty) return 'No prediction available';
-
-    final highest = _predictions.entries.reduce((a, b) => a.value > b.value ? a : b);
-
-    switch (highest.key) {
-    case 'discomfort':
-    return 'Try adjusting the baby\'s position or checking for any irritants.';
-    case 'burping':
-    return 'Hold the baby upright and gently pat their back to help them burp.';
-    case 'belly_pain':
-    return 'Consider massaging the baby\'s tummy or consulting a pediatrician.';
-    case 'hungry':
-    return 'Try feeding the baby.';
-    case 'tired':
-    return 'Put the baby in a calm environment to help them sleep.';
-    case 'others':
-    return 'The cry pattern doesn\'t match common needs. Check for other signs.';
-    default:
-    return 'No suggestion available.';
-    }
+    return CircleAvatar(
+      radius: size,
+      backgroundColor: color.withOpacity(0.2),
+      backgroundImage: AssetImage(imagePath),
+      child: imagePath.isEmpty
+          ? Icon(Icons.help_outline, color: color, size: size * 0.6)
+          : null, // Show icon if image fails to load
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final suggestion = _getSuggestion();
+    // Sort predictions by percentage (highest first)
+    final sortedPredictions = widget.predictionResults.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final highestPrediction = sortedPredictions.isNotEmpty
+        ? sortedPredictions.first
+        : null;
+
+    final topSuggestions = _selectedFilter != null
+        ? _getSuggestions(_selectedFilter!)
+        : _getSuggestions(highestPrediction?.key ?? 'Others');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFDFFAFF),
-      appBar: AppBar(
-        title: const Text('Cry Prediction Result'),
-        backgroundColor: const Color(0xFFDFFAFF),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CryCaptureScreen(),
+            ),
+          );
+        },
+        child: const Icon(Icons.mic,color: Colors.white,),
+        backgroundColor: Colors.deepOrange.shade600,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-          ? Center(child: Text(_errorMessage))
-          : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Audio waveform visualization
-            if (_audioSamples != null)
-              Container(
-                height: 100,
-                padding: const EdgeInsets.all(8),
-                // child: AudioWaveform(
-                //   samples: _audioSamples!,
-                //   color: Colors.blue,
-                // ),
+      body: CustomScrollView(
+        slivers: [
+          // Expanded AppBar with most likely reason
+          SliverAppBar(
+            expandedHeight: 120,
+            leading: IconButton(onPressed: (){Navigator.pop(context);}, icon: Icon(Icons.arrow_back,color: Colors.white,)),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 60, bottom: 16),
+              title: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (highestPrediction != null)
+                    _getCategoryAvatar(highestPrediction.key, size: 30),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${highestPrediction?.value.toStringAsFixed(0)}% Likely to be',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          highestPrediction?.key ?? '',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-
-            const SizedBox(height: 20),
-
-            // Prediction results
-            if (_predictions.isEmpty)
-              const Text('No predictions available', style: TextStyle(fontSize: 18))
-            else
-              ..._buildPredictionWidgets(),
-
-            const SizedBox(height: 20),
-
-            // Suggestion
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.teal[50],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Suggestion: $suggestion',
-                style: const TextStyle(fontSize: 16),
+              background: Container(
+                color: Colors.deepOrange.shade600,
               ),
             ),
-          ],
-        ),
+            pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.filter_alt,color: Colors.white,),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (context) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Filter Recommendations',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          ...sortedPredictions
+                              .where((entry) => entry.key != 'Others')
+                              .map((entry) {
+                            return RadioListTile<String>(
+                              title: Text(entry.key),
+                              value: entry.key,
+                              groupValue: _selectedFilter,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedFilter = value;
+                                });
+                                Navigator.pop(context);
+                              },
+                              secondary: _getCategoryAvatar(entry.key, size: 24),
+                            );
+                          }),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedFilter = null;
+                              });
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Reset Filter'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+
+          // Main content
+          SliverList(
+            delegate: SliverChildListDelegate([
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8,vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Predictions with progress bars
+                    const Text(
+                      'All predictions',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...sortedPredictions.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  entry.key,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '${entry.value.toStringAsFixed(0)}%',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: entry.value / 100,
+                              backgroundColor: Colors.grey[300],
+                              color: _getProgressBarColor(entry.key),
+                              minHeight: 8,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+
+                    // Top 3 Recommendations
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Recommendations',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedFilter != null
+                          ? 'For $_selectedFilter'
+                          : 'For ${highestPrediction?.key ?? 'your baby'}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...topSuggestions.take(3).map((suggestion) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 4, right: 12),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                suggestion,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+
+                    // Did it work section
+                    const SizedBox(height: 0),
+                    const Divider(),
+                    const SizedBox(height: 0),
+                    if (!_feedbackSubmitted) ...[
+                      const Text(
+                        'Did these suggestions help?',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(color: Colors.green.shade400),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _feedbackSubmitted = true;
+                                });
+                                // You could add analytics or backend call here
+                              },
+                              child: Text(
+                                'Yes',
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(color: Colors.red.shade400),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _feedbackSubmitted = true;
+                                });
+                                // You could add analytics or backend call here
+                              },
+                              child: Text(
+                                'No',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text(
+                            'Thanks for your feedback!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'We\'ll use this to improve our suggestions.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildPredictionWidgets() {
-    return _predictions.entries.map((entry) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            Text(
-              '${entry.key.replaceAll('_', ' ').toUpperCase()}: ${entry.value.toStringAsFixed(1)}%',
-              style: const TextStyle(fontSize: 16),
-            ),
-            LinearProgressIndicator(
-              value: entry.value / 100,
-              backgroundColor: Colors.grey[300],
-              color: Colors.teal,
-              minHeight: 8,
-            ),
-          ],
-        ),
-      );
-    }).toList();
-  }
-
-  @override
-  void dispose() {
-    _interpreter.close();
-    super.dispose();
+  Color _getProgressBarColor(String category) {
+    switch (category) {
+      case 'Belly Pain':
+        return Colors.redAccent;
+      case 'Burping':
+        return Colors.orangeAccent;
+      case 'Discomfort':
+        return Colors.blue;
+      case 'Hungry':
+        return Colors.greenAccent;
+      case 'Tired':
+        return Colors.purpleAccent;
+      case 'Others':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
   }
 }

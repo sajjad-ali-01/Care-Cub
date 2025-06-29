@@ -1,19 +1,24 @@
+ // Import the Vaccination Tracker screen
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'SleepTracking.dart';
+
 import 'FeedingTracker.dart';
+import 'SleepTracking.dart';
 import 'VaccinationTracker.dart';
+
 class TrackersList extends StatelessWidget {
   // List of activities
   final List<Map<String, String>> activities = [
     {
       'title': 'Sleep Tracking',
       'description': 'Monitor and track your sleep patterns.',
-      'image': 'assets/images/sleep_tracking.jpg',
+      'image': 'assets/images/feeding.jpg',
     },
     {
       'title': 'Feeding',
       'description': 'Keep track of feeding schedules and nutrition.',
-      'image': 'assets/images/feeding.jpg',
+      'image': 'assets/images/sleep_tracking.jpg',
     },
     {
       'title': 'Vaccination',
@@ -22,6 +27,7 @@ class TrackersList extends StatelessWidget {
     },
   ];
 
+  // List of tile colors
   final List<Color> tileColors = [
     Colors.lightBlue.shade50,
     Colors.lightGreen.shade50,
@@ -32,14 +38,13 @@ class TrackersList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade500,
-        title: const Text('Trackers',style: TextStyle(color: Colors.white),),
+        title: const Text('Trackers'),
       ),
       body: ListView.builder(
         itemCount: activities.length,
         itemBuilder: (context, index) {
           final activity = activities[index];
-          final tileColor = tileColors[index % tileColors.length];
+          final tileColor = tileColors[index % tileColors.length]; // Rotate colors
           return Card(
             margin: const EdgeInsets.all(8.0),
             color: tileColor,
@@ -61,6 +66,7 @@ class TrackersList extends StatelessWidget {
               subtitle: Text(activity['description']!),
               trailing: const Icon(Icons.arrow_forward, color: Colors.grey),
               onTap: () {
+                // Navigate to specific activity
                 if (activity['title'] == 'Sleep Tracking') {
                   Navigator.push(
                     context,
@@ -77,6 +83,7 @@ class TrackersList extends StatelessWidget {
                     MaterialPageRoute(builder: (context) => VaccinationTrackerScreen()),
                   );
                 } else {
+                  // Show a dialog with activity details for other activities
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(

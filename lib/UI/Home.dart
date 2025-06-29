@@ -8,7 +8,6 @@ import 'CryTranslation/cryUI.dart';
 import 'Doctor_Booking/Parents_side/Doctorlist.dart';
 import 'Milestone/milestones_screen.dart';
 import 'Nutrition Guide/SelectDate.dart';
-import 'TrakingsScreens/Milstone.dart';
 import 'TrakingsScreens/TrackersList.dart';
 import 'User/ProfileScreen.dart';
 import 'dart:io';
