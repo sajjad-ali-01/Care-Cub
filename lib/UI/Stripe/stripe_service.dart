@@ -12,8 +12,8 @@ class StripService {
   factory StripService() => instance;
 
   // Replace with your actual Stripe keys
-  static const String secretKey = 'sk_test_51Ra8LuFwAP5xaYgUxgNvjNymtudeIkoIpsVOAqvrnR8uUztEuLLM8Daxzkm4FYs0bghCOMPlpsVT1FAzRmC9XwRM00hi6X1HH0';
-  static const String publishableKey = 'pk_test_51Ra8LuFwAP5xaYgUclqT21zQQ5nbJLlYzlwEwONNPrPXsuyOBgxyWCbfwn5jYicRaPogKGOl1UY5ne0xaLDVUqjc0094RAvX2A';
+  static const String secretKey = '';
+  static const String publishableKey = '';
   static const String api = 'https://api.stripe.com/v1/payment_intents';
 
   Future<Map<String, dynamic>?> _paymentIntent(double amount, String currency) async {

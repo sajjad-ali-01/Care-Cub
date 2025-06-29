@@ -1,4 +1,4 @@
 
-const publicKey = 'pk_test_51Ra8LuFwAP5xaYgUclqT21zQQ5nbJLlYzlwEwONNPrPXsuyOBgxyWCbfwn5jYicRaPogKGOl1UY5ne0xaLDVUqjc0094RAvX2A';
-const secretKey = 'sk_test_51Ra8LuFwAP5xaYgUxgNvjNymtudeIkoIpsVOAqvrnR8uUztEuLLM8Daxzkm4FYs0bghCOMPlpsVT1FAzRmC9XwRM00hi6X1HH0';
+const publicKey = '';
+const secretKey = '';
 const api = 'https://api.stripe.com/v1/payment_intents';
