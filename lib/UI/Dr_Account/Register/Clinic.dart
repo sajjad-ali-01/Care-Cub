@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'ThankyouScreen.dart';
 
 class AddClinicScreen extends StatefulWidget {
@@ -14,9 +17,10 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
   final TextEditingController addressController = TextEditingController();
   final TextEditingController cityController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
-  final TextEditingController FeeController = TextEditingController();
+  final TextEditingController feeController = TextEditingController();
   bool isLoading = false;
-
+  LatLng? selectedLocation;
+  String? selectedAddress;
 
   final List<String> daysOfWeek = [
     'Monday',
@@ -60,8 +64,81 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
     });
   }
 
-  void saveClinicInfo() async {
+  Future<void> _selectLocation() async {
+    // Request location permission
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location services are disabled.')),
+      );
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location permissions are denied')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location permissions are permanently denied.')),
+      );
+      return;
+    }
+
+    // Get current position
+    Position position = await Geolocator.getCurrentPosition();
+
+    // Show map for location selection
+    final LatLng? picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialPosition: LatLng(position.latitude, position.longitude),
+        ),
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        selectedLocation = picked;
+      });
+
+      // Get address from coordinates
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          picked.latitude,
+          picked.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
+          setState(() {
+            selectedAddress = "${place.street}, ${place.locality}, ${place.country}";
+            addressController.text = selectedAddress ?? '';
+            cityController.text = place.locality ?? '';
+          });
+        }
+      } catch (e) {
+        print("Error getting address: $e");
+      }
+    }
+  }
+
+  Future<void> saveClinicInfo() async {
     if (_formKey.currentState!.validate()) {
+      if (selectedLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please select a location from the map")),
+        );
+        return;
+      }
+
       setState(() {
         isLoading = true;
       });
@@ -96,9 +173,10 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
           'ClinicName': clinicNameController.text,
           'ClinicCity': cityController.text,
           'Address': addressController.text,
-          'Location': locationController.text,
+          'Location': GeoPoint(selectedLocation!.latitude, selectedLocation!.longitude),
           'Availability': availability,
-          'Fees': FeeController.text,
+          'Fees': feeController.text,
+          'FormattedAddress': selectedAddress,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -108,11 +186,13 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
         clinicNameController.clear();
         cityController.clear();
         addressController.clear();
-        locationController.clear();
+        feeController.clear();
         setState(() {
           selectedDays.forEach((key, value) {
             value['isSelected'] = false;
           });
+          selectedLocation = null;
+          selectedAddress = null;
         });
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,37 +230,67 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
 
               TextFormField(
                 controller: clinicNameController,
-                decoration: InputDecoration(labelText: "Clinic/Hospital Name",hintText: "Ali Hospital", border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: "Clinic/Hospital Name",
+                  hintText: "Ali Hospital",
+                  border: OutlineInputBorder(),
+                ),
                 validator: (value) => value!.isEmpty ? "Please enter clinic/hospital name" : null,
               ),
               SizedBox(height: 20),
+
               TextFormField(
-                controller: FeeController,
-                decoration: InputDecoration(labelText: "Fees",hintText: "1000", border: OutlineInputBorder()),
-                validator: (value) => value!.isEmpty ? "Please enter clinic/hospital name" : null,
+                controller: feeController,
+                decoration: InputDecoration(
+                  labelText: "Fees",
+                  hintText: "1000",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? "Please enter fees" : null,
+                keyboardType: TextInputType.number,
               ),
               SizedBox(height: 20),
 
               TextFormField(
                 controller: addressController,
-                decoration: InputDecoration(labelText: "Address",hintText: "123,street 2,Ali town" ,border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: "Address",
+                  border: OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.map),
+                    onPressed: _selectLocation,
+                  ),
+                ),
                 validator: (value) => value!.isEmpty ? "Please enter address" : null,
+                readOnly: true,
+                onTap: _selectLocation,
               ),
               SizedBox(height: 20),
 
               TextFormField(
                 controller: cityController,
-                decoration: InputDecoration(labelText: "City",hintText: "Lahore", border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  labelText: "City",
+                  hintText: "Lahore",
+                  border: OutlineInputBorder(),
+                ),
                 validator: (value) => value!.isEmpty ? "Please enter city" : null,
               ),
               SizedBox(height: 20),
 
-              TextFormField(
-                controller: locationController,
-                decoration: InputDecoration(labelText: "Location", border: OutlineInputBorder()),
-                validator: (value) => value!.isEmpty ? "Please enter location" : null,
-              ),
-              SizedBox(height: 20),
+              if (selectedLocation != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Selected Location:",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text("Latitude: ${selectedLocation!.latitude}"),
+                    Text("Longitude: ${selectedLocation!.longitude}"),
+                    SizedBox(height: 10),
+                  ],
+                ),
 
               Text(
                 "Select Availability Days and Timings",
@@ -229,21 +339,35 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
               Center(
                 child: ElevatedButton(
                   onPressed: saveClinicInfo,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-                  child: Text("Save Clinic Info", style: TextStyle(color: Colors.white, fontSize: 18)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepOrange,
+                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  ),
+                  child: isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text("Save Clinic Info", style: TextStyle(color: Colors.white, fontSize: 18)),
                 ),
               ),
               SizedBox(height: 10),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      saveClinicInfo();
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ThankYouScreen()));
+                      await saveClinicInfo();
+                      if (!mounted) return;
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => ThankYouScreen()),
+                      );
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: Text("Save and Finish", style: TextStyle(color: Colors.white, fontSize: 18)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  ),
+                  child: isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : Text("Save and Finish", style: TextStyle(color: Colors.white, fontSize: 18)),
                 ),
               ),
             ],
@@ -251,5 +375,191 @@ class _AddClinicScreenState extends State<AddClinicScreen> {
         ),
       ),
     );
+  }
+}
+
+
+class LocationPickerScreen extends StatefulWidget {
+  final LatLng initialPosition;
+
+  LocationPickerScreen({required this.initialPosition});
+
+  @override
+  _LocationPickerScreenState createState() => _LocationPickerScreenState();
+}
+
+class _LocationPickerScreenState extends State<LocationPickerScreen> {
+  late GoogleMapController mapController;
+  LatLng? selectedLocation;
+  final Set<Marker> markers = {};
+  final TextEditingController searchController = TextEditingController();
+  bool isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedLocation = widget.initialPosition;
+    markers.add(
+      Marker(
+        markerId: MarkerId('selectedLocation'),
+        position: widget.initialPosition,
+        draggable: true,
+      ),
+    );
+  }
+
+  Future<void> searchPlace(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      isSearching = true;
+    });
+
+    try {
+      List<Location> locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        final newPosition = LatLng(location.latitude, location.longitude);
+
+        setState(() {
+          selectedLocation = newPosition;
+          markers.clear();
+          markers.add(
+            Marker(
+              markerId: MarkerId('selectedLocation'),
+              position: newPosition,
+              draggable: true,
+            ),
+          );
+          mapController.animateCamera(
+            CameraUpdate.newLatLngZoom(newPosition, 15),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No results found for "$query"')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error searching location: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        isSearching = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Select Clinic Location'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.check),
+            onPressed: () {
+              if (selectedLocation != null) {
+                Navigator.pop(context, selectedLocation);
+              }
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: widget.initialPosition,
+              zoom: 15,
+            ),
+            onMapCreated: (controller) {
+              setState(() {
+                mapController = controller;
+              });
+            },
+            markers: markers,
+            onTap: (LatLng location) {
+              setState(() {
+                selectedLocation = location;
+                markers.clear();
+                markers.add(
+                  Marker(
+                    markerId: MarkerId('selectedLocation'),
+                    position: location,
+                    draggable: true,
+                  ),
+                );
+              });
+            },
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+          ),
+          Positioned(
+            top: 10,
+            left: 10,
+            right: 10,
+            child: Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search for a place...',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 15),
+                        ),
+                        onSubmitted: searchPlace,
+                      ),
+                    ),
+                    if (isSearching)
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      IconButton(
+                        icon: Icon(Icons.search),
+                        onPressed: () => searchPlace(searchController.text),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.my_location),
+        onPressed: () async {
+          Position position = await Geolocator.getCurrentPosition();
+          setState(() {
+            selectedLocation = LatLng(position.latitude, position.longitude);
+            markers.clear();
+            markers.add(
+              Marker(
+                markerId: MarkerId('selectedLocation'),
+                position: selectedLocation!,
+                draggable: true,
+              ),
+            );
+            mapController.animateCamera(
+              CameraUpdate.newLatLng(selectedLocation!),
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 }

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HydraLang Compiler</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>HydraLang Compiler</h1>
+
+    <div class="analyzer">
+      <div class="section">
+        <label for="codeInput">Enter HydraLang Code:</label>
+        <textarea id="codeInput" placeholder="Type your HydraLang code here..."></textarea>
+        <button onclick="analyzeCode()">Compile</button>
+      </div>
+
+      <div class="output-section">
+        <div class="output-box">
+          <label>Lexical Tokens:</label>
+          <pre id="lexicalOutput">Lexical tokens will appear here...</pre>
+        </div>
+
+        <div class="output-box">
+          <label>Syntax Analysis & AST:</label>
+          <pre id="syntaxOutput">Syntax analysis and AST will appear here...</pre>
+        </div>
+
+        <div class="output-box">
+          <label>Semantic Analysis:</label>
+          <pre id="semanticOutput">Semantic analysis results will appear here...</pre>
+        </div>
+      </div>
+
+      <div class="output-section">
+        <div class="output-box">
+          <label>Intermediate Code:</label>
+          <pre id="icgOutput">Intermediate code will appear here...</pre>
+        </div>
+
+        <div class="output-box">
+          <label>Optimized Code:</label>
+          <pre id="optimizedOutput">Optimized code will appear here...</pre>
+        </div>
+
+        <div class="output-box">
+          <label>Target Code:</label>
+          <pre id="targetOutput">Target code will appear here...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="hydro.js"></script>
+</body>
+</html>

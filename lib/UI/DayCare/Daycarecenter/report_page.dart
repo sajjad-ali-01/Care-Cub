@@ -4,12 +4,21 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 class ReportPage extends StatefulWidget {
   final String childName;
   final String childAge;
   final String parentName;
+  final String bookingId;
 
-  ReportPage({required this.childName, required this.childAge, required this.parentName});
+  ReportPage({
+    required this.childName,
+    required this.childAge,
+    required this.parentName,
+    required this.bookingId,
+  });
 
   @override
   _ReportPageState createState() => _ReportPageState();
@@ -18,6 +27,15 @@ class ReportPage extends StatefulWidget {
 class _ReportPageState extends State<ReportPage> {
   final TextEditingController activityController = TextEditingController();
   List<Map<String, dynamic>> activities = [];
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  late String daycareId;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    daycareId = user!.uid;
+  }
 
   void _addActivity() {
     if (activityController.text.isNotEmpty) {
@@ -40,6 +58,45 @@ class _ReportPageState extends State<ReportPage> {
     return total / activities.length;
   }
 
+  Future<void> saveReportToFirestore() async {
+    try {
+      final reportData = {
+        'childName': widget.childName,
+        'childAge': widget.childAge,
+        'parentName': widget.parentName,
+        'activities': activities,
+        'averagePercentage': calculateAveragePercentage(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'daycareId': daycareId,
+      };
+
+      // First save the report
+      await firestore
+          .collection('DaycareBookings')
+          .doc(widget.bookingId)
+          .collection('reports')
+          .add(reportData);
+
+      // Then update the booking status
+      await firestore
+          .collection('DaycareBookings')
+          .doc(widget.bookingId)
+          .update({
+        'hasReport': true,
+        'lastReportDate': FieldValue.serverTimestamp(),
+        'status': 'completed', // Add this line to mark as completed
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Report saved successfully and booking marked as completed!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save report: ${e.toString()}")),
+      );
+    }
+  }
+
   Future<void> generatePDF() async {
     if (activities.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,56 +105,52 @@ class _ReportPageState extends State<ReportPage> {
       return;
     }
 
+    // Create PDF (if you still want to generate it locally)
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text("Child Report", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 10),
-              pw.Text("Child: ${widget.childName}", style: pw.TextStyle(fontSize: 18)),
-              pw.Text("Age: ${widget.childAge}", style: pw.TextStyle(fontSize: 18)),
-              pw.Text("Parent: ${widget.parentName}", style: pw.TextStyle(fontSize: 18)),
+              pw.Text('Child Report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 20),
-
-              pw.Text("Activities Participated:", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 10),
-
-              pw.Table.fromTextArray(
-                headers: ["Activity Name", "Performance (%)"],
-                data: activities.map((activity) => [activity["name"], "${activity["percentage"].toInt()}%"]).toList(),
-              ),
-
+              pw.Text('Child: ${widget.childName}', style: pw.TextStyle(fontSize: 18)),
+              pw.Text('Age: ${widget.childAge}', style: pw.TextStyle(fontSize: 16)),
+              pw.Text('Parent: ${widget.parentName}', style: pw.TextStyle(fontSize: 16)),
               pw.SizedBox(height: 20),
-
-              pw.Text("Average Performance Score: ${calculateAveragePercentage().toInt()}%",
-                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-
+              pw.Text('Activities:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
-              pw.Text(
-                calculateAveragePercentage() > 70 ? "Great Job! Keep up the good work!" : "Needs Improvement! Keep encouraging your child!",
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue),
-              ),
+              ...activities.map((activity) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('${activity["name"]}: ${activity["percentage"].toStringAsFixed(1)}%'),
+                  pw.SizedBox(height: 5),
+                ],
+              )).toList(),
+              pw.SizedBox(height: 20),
+              pw.Text('Average Performance: ${calculateAveragePercentage().toStringAsFixed(1)}%',
+                  style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
-              pw.Text("We appreciate your support! Please visit again for progress updates."),
+              pw.Text(calculateAveragePercentage() > 70
+                  ? 'Great Job! Keep up the good work!'
+                  : 'Needs Improvement! Keep encouraging your child!'),
             ],
           );
         },
       ),
     );
 
+    // Save PDF locally (optional)
     final directory = await getApplicationDocumentsDirectory();
-    final filePath = "${directory.path}/Child_Report_${widget.childName}.pdf";
+    final filePath = "${directory.path}/Daycare_Report_${widget.childName}.pdf";
     final file = File(filePath);
     await file.writeAsBytes(await pdf.save());
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("PDF Report Saved: $filePath")),
-    );
+    // Save the data to Firestore and update booking status
+    await saveReportToFirestore();
 
+    // Open the PDF locally (optional)
     _openPDF(filePath);
   }
 
@@ -120,86 +173,95 @@ class _ReportPageState extends State<ReportPage> {
             Text("Child: ${widget.childName}", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text("Age: ${widget.childAge}", style: TextStyle(fontSize: 16)),
             Text("Parent: ${widget.parentName}", style: TextStyle(fontSize: 16)),
-            SizedBox(height:2),
+            SizedBox(height: 20),
 
             Text("Activities Participated:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextField(
               controller: activityController,
-              decoration: InputDecoration(labelText: "Enter Activity"),
+              decoration: InputDecoration(
+                labelText: "Enter Activity",
+                border: OutlineInputBorder(),
+              ),
             ),
+            SizedBox(height: 10),
             ElevatedButton(
               onPressed: _addActivity,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-                padding: EdgeInsets.symmetric(
-                    vertical: 10, horizontal: 35),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
-              ),
-              child: Text("Add Activity",style: TextStyle(color: Colors.white),),
+                  backgroundColor: Colors.deepOrange,
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              child: Text("Add Activity", style: TextStyle(color: Colors.white)),
             ),
-            SizedBox(height: 3),
-
+            SizedBox(height: 20),
 
             Container(
               height: MediaQuery.of(context).size.height * 0.4,
-              child: ListView.builder(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: activities.isEmpty
+                  ? Center(child: Text("No activities added yet"))
+                  : ListView.builder(
                 itemCount: activities.length,
                 itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(activities[index]["name"]),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Performance: ${activities[index]["percentage"].toInt()}%"),
-                        Slider(
-                          value: activities[index]["percentage"],
-                          min: 0,
-                          max: 100,
-                          divisions: 20,
-                          label: "${activities[index]["percentage"].toInt()}%",
-                          onChanged: (value) {
-                            setState(() {
-                              activities[index]["percentage"] = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => removeActivity(index),
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    child: ListTile(
+                      title: Text(activities[index]["name"]),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Performance: ${activities[index]["percentage"].toInt()}%"),
+                          Slider(
+                            value: activities[index]["percentage"],
+                            min: 0,
+                            max: 100,
+                            divisions: 20,
+                            label: "${activities[index]["percentage"].toInt()}%",
+                            onChanged: (value) {
+                              setState(() {
+                                activities[index]["percentage"] = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => removeActivity(index),
+                      ),
                     ),
                   );
                 },
               ),
             ),
 
+            SizedBox(height: 20),
             Text(
               "Average Performance Score: ${calculateAveragePercentage().toInt()}%",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 3),
+            SizedBox(height: 10),
 
             Text(
-              calculateAveragePercentage() > 70 ? "Great Job! Keep up the good work!" : "Needs Improvement! Keep encouraging your child! ",
+              calculateAveragePercentage() > 70 ? "Great Job! Keep up the good work!" : "Needs Improvement! Keep encouraging your child!",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
             ),
-            SizedBox(height: 5),
+            SizedBox(height: 10),
+
             Text("We appreciate your support! Please visit again for progress updates."),
 
-            SizedBox(height: 0),
+            SizedBox(height: 20),
             Center(
               child: ElevatedButton(
                 onPressed: generatePDF,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-                  padding: EdgeInsets.symmetric(
-                      vertical: 10, horizontal: 40),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15)),
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: Text("Submit Report",style: TextStyle(color: Colors.white),),
+                child: Text("Generate Report", style: TextStyle(color: Colors.white)),
               ),
             ),
           ],

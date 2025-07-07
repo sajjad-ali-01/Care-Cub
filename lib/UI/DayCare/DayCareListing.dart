@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'MyBookings.dart';
 import 'BookingScreen.dart';
 import 'DayCareDetails.dart';
 
@@ -12,6 +13,14 @@ class DayCareList extends StatefulWidget {
 class _DayCareListState extends State<DayCareList> {
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,44 +33,43 @@ class _DayCareListState extends State<DayCareList> {
         leading: isSearching
             ? null
             : IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
           icon: Icon(Icons.arrow_back, color: Colors.white),
         ),
         title: isSearching
-            ? Container(
-          width: double.infinity,
-          child: TextField(
-            controller: searchController,
-            onSubmitted: (value) {
-              setState(() {
-                isSearching = false;
-              });
-            },
-            decoration: InputDecoration(
-              hintText: "Search DayCare Center",
-              hintStyle: TextStyle(color: Colors.white),
-              suffixIcon: IconButton(
-                icon: Icon(Icons.send_outlined, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    isSearching = false;
-                  });
-                },
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.white, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide(color: Colors.white, width: 2),
-              ),
-              contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+            ? TextField(
+          controller: searchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: "Search DayCare Center",
+            hintStyle: TextStyle(color: Colors.white),
+            border: InputBorder.none,
+            suffixIcon: IconButton(
+              icon: Icon(Icons.send, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  searchController.clear();
+                  _searchQuery = '';
+                });
+              },
             ),
-            style: TextStyle(color: Colors.white),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide(color: Colors.white, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: Colors.white, width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 20),
           ),
+          style: TextStyle(color: Colors.white),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value.toLowerCase();
+            });
+          },
+
         )
             : Center(
           child: Text(
@@ -69,75 +77,126 @@ class _DayCareListState extends State<DayCareList> {
             style: TextStyle(color: Colors.white),
           ),
         ),
-        actions: isSearching
-            ? null
-            : [
+        actions: [
           IconButton(
-            icon: Icon(Icons.search, color: Colors.white),
+            icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white),
             onPressed: () {
               setState(() {
-                isSearching = true;
+                isSearching = !isSearching;
+                if (!isSearching) {
+                  searchController.clear();
+                  _searchQuery = '';
+                }
               });
             },
           ),
         ],
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: ListView(
-          children: [
-            DaycareCard(
-              name: "Sunshine Kids Academy",
-              type: "Premium Daycare",
-              rating: "4.8 (320 reviews)",
-              price: "Rs. 800/day",
-              description: "A premium childcare center offering...",
-              ageRange: "1-5 years",
-              hours: "Mon-Fri 8am-7pm, Sat 9am-4pm",
-              capacity: "50 children",
-              image: "assets/images/daycareCenter1.webp",
-              location: "123 Green Valley Road, Downtown",
-              features: ["Ages 1-5", "8am - 7pm", "Live CCTV Access"],
-              facilities: ["Outdoor Play", "Art Studio", "Nap Rooms"],
-              highlights: ["Free Trial Day", "Healthy Meals", "First Aid Certified"],
-              safetyFeatures: ["24/7 CCTV", "Fire Safety", "First Aid Trained"],
-              programs: [
-                {
-                  'name': "Toddler Program",
-                  'ageRange': "1-3 yrs",
-                  'description': "Focus on motor skills development..."
-                },
-                {
-                  'name': "Infant Care",
-                  'ageRange': "6-18 mos",
-                  'description': "Gentle care program with sensory stimulation activities"
-                },
-                {
-                  'name': "Montessori Primary",
-                  'ageRange': "3-6 yrs",
-                  'description': "Practical life skills and early academic preparation"
-                }
-              ],
-              gallery: [
-                "assets/images/daycareCenter1.webp",
-                "assets/images/daycareCenter2.webp",
-                "assets/images/daycareCenter3.webp",
-
-              ],
-              address: "123 Green Valley Road, Downtown",
-              phone: "+92 300 123 4567",
-              email: "info@sunshinekids.com",
-            ),
-            // Add more DaycareCard entries
-          ],
-        ),
-      ),
+      body: _buildDaycareList(),
     );
   }
-}
 
+  Widget _buildDaycareList() {
+    return Column(
+      children: [
+        // Add your two buttons here
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => BookingsScreen()));
+                  },
+                  child: Text("My Bookings", style: TextStyle(fontSize: 15)),
+                  style: OutlinedButton.styleFrom(shape: StadiumBorder()),
+                ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {},
+                  child: Text("Day Cares Near Me", style: TextStyle(fontSize: 15)),
+                  style: OutlinedButton.styleFrom(shape: StadiumBorder()),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Your existing StreamBuilder
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _searchQuery.isEmpty
+                ? _firestore.collection('DayCare').snapshots()
+                : _firestore
+                .collection('DayCare')
+                .where('name', isGreaterThanOrEqualTo: _searchQuery)
+                .where('name', isLessThan: _searchQuery + 'z')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(
+                  child: Text(
+                    _searchQuery.isEmpty
+                        ? 'No daycare centers found'
+                        : 'No results for "$_searchQuery"',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                );
+              }
+
+              return ListView(
+                padding: EdgeInsets.symmetric(horizontal: 10,vertical: 0),
+                children: snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return DaycareCard(
+                    id: doc.id,
+                    name: data['name'] ?? 'No Name',
+                    type: data['isVerified'] ? "Verified Daycare" : "Daycare",
+                    rating: "4.5 (120 reviews)",
+                    price: "Rs. ${data['price'] ?? '800'}/day",
+                    description: data['description'] ?? 'No description',
+                    ageRange: data['ageRange'] ?? 'Not specified',
+                    hours: data['hours'] ?? 'Not specified',
+                    capacity: data['capacity'] ?? 'Not specified',
+                    image: data['profileImageUrl'] ?? 'assets/images/daycareCenter1.webp',
+                    location: data['address'] ?? 'No address',
+                    features: [
+                      data['ageRange'] ?? 'All ages',
+                      data['hours'] ?? 'Flexible hours',
+                      data['isVerified'] ? 'Verified' : 'Not verified'
+                    ],
+                    facilities: List<String>.from(data['facilities'] ?? []),
+                    highlights: ['Safe Environment', 'Qualified Staff'],
+                    safetyFeatures: List<String>.from(data['safetyFeatures'] ?? []),
+                    programs: List<Map<String, String>>.from(
+                        data['programs']?.map((p) => Map<String, String>.from(p)) ?? []),
+                    gallery: List<String>.from(data['galleryImages'] ?? []),
+                    address: data['address'] ?? 'No address',
+                    phone: data['phone'] ?? 'No phone',
+                    email: data['email'] ?? 'No email',
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+  }
 class DaycareCard extends StatelessWidget {
+  final String id;
   final String name;
   final String type;
   final String rating;
@@ -159,6 +218,7 @@ class DaycareCard extends StatelessWidget {
   final String email;
 
   DaycareCard({
+    required this.id,
     required this.name,
     required this.type,
     required this.rating,
@@ -179,6 +239,7 @@ class DaycareCard extends StatelessWidget {
     required this.phone,
     required this.email,
   });
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -195,6 +256,7 @@ class DaycareCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => DaycareDetailScreen(
                 daycare: {
+                  'id': id,
                   'name': name,
                   'description': description,
                   'ageRange': ageRange,
@@ -208,14 +270,15 @@ class DaycareCard extends StatelessWidget {
                   'phone': phone,
                   'email': email,
                   'gallery': gallery,
-                  // Include other necessary fields
+                  'type': type,
+                  'price': price,
                 },
               ),
             ),
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -228,7 +291,7 @@ class DaycareCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: DecorationImage(
-                        image: AssetImage(image),
+                        image: NetworkImage(image),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -238,26 +301,6 @@ class DaycareCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade100,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                type,
-                                style: TextStyle(
-                                  color: Colors.orange.shade800,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
                         Text(
                           name,
                           style: TextStyle(
@@ -270,15 +313,14 @@ class DaycareCard extends StatelessWidget {
                         Row(
                           children: [
                             Icon(Icons.location_on,
-                                size: 16,
-                                color: Colors.deepOrange.shade400),
+                                size: 18, color: Colors.deepOrange.shade400),
                             SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 location,
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
-                                  fontSize: 13,
+                                  fontSize: 17,
                                 ),
                               ),
                             ),
@@ -287,14 +329,40 @@ class DaycareCard extends StatelessWidget {
                         SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(Icons.star, color: Colors.amber, size: 18),
-                            SizedBox(width: 4),
-                            Text(
-                              rating,
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            StreamBuilder<double>(
+                              stream: getOverallRatingStream(id), // pass your actual daycareId here
+                              builder: (context, snapshot) {
+                                // Handle different states of the stream
+                                if (snapshot.hasError) {
+                                  return Text('Error loading rating');
+                                }
+
+                                if (!snapshot.hasData) {
+                                  return const SizedBox(
+                                    width: 50, // approximate width of the rating display
+                                    child: LinearProgressIndicator(),
+                                  );
+                                }
+
+                                final rating = snapshot.data ?? 0.0;
+                                final ratingText = rating.toStringAsFixed(1);
+
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.star, color: Colors.blue.shade900, size: 18),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      ratingText,
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             Spacer(),
                             Text(
@@ -312,57 +380,58 @@ class DaycareCard extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 15),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: features.map((feature) => Chip(
-                  label: Text(feature),
-                  backgroundColor: Colors.blue.shade50,
-                  labelStyle: TextStyle(color: Colors.blue.shade800),
-                )).toList(),
-              ),
-              SizedBox(height: 15),
+              SizedBox(height: 10),
               Container(
                 height: 110,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
+                    if (facilities.isNotEmpty)
+                      buildInfoCard(
+                        title: "Facilities",
+                        icon: Icons.emoji_food_beverage,
+                        items: facilities.take(3).toList(),
+                        color: Colors.blue.shade100,
+                      ),
+                    if (safetyFeatures.isNotEmpty)
+                      buildInfoCard(
+                        title: "Safety",
+                        icon: Icons.security,
+                        items: safetyFeatures.take(3).toList(),
+                        color: Colors.green.shade100,
+                      ),
                     buildInfoCard(
-                      title: "Facilities",
-                      icon: Icons.emoji_food_beverage,
-                      items: facilities,
-                      color: Colors.blue.shade100,
-                    ),
-                    buildInfoCard(
-                      title: "Safety Features",
-                      icon: Icons.security,
-                      items: safetyFeatures,
-                      color: Colors.green.shade100,
-                    ),
-                    buildInfoCard(
-                      title: "Special Offers",
+                      title: "Highlights",
                       icon: Icons.local_offer,
-                      items: highlights,
+                      items: highlights.take(3).toList(),
                       color: Colors.orange.shade100,
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 15),
+              SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=>DaycareBookingScreen(
-                    image: image,
-                    name: name,
-                    type: type,
-                    location: location,
-                    price: price,
-                  )
-                  ));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DaycareBookingScreen(
+                        image: image,
+                        name: name,
+                        type: type,
+                        location: location,
+                        price: price,
+                        daycareId: id,
+                      ),
+                    ),
+                  );
                 },
-                icon: Icon(Icons.calendar_today, size: 18,color: Colors.tealAccent.shade200,),
-                label: Text("Book Now",style: TextStyle(color: Colors.white,fontSize: 17),),
+                icon: Icon(Icons.calendar_today,
+                    size: 18, color: Colors.tealAccent.shade200),
+                label: Text(
+                  "Book Now",
+                  style: TextStyle(color: Colors.white, fontSize: 17),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange.shade400,
                   foregroundColor: Colors.white,
@@ -437,5 +506,27 @@ class DaycareCard extends StatelessWidget {
         ],
       ),
     );
+  }
+  Stream<double> getOverallRatingStream(String daycareId) {
+    return FirebaseFirestore.instance
+        .collection('DaycareReviews')
+        .where('daycareId', isEqualTo: daycareId)
+        .snapshots()
+        .map((querySnapshot) {
+      if (querySnapshot.docs.isEmpty) return 0.0;
+
+      double totalRating = 0;
+      int reviewCount = 0;
+
+      for (var doc in querySnapshot.docs) {
+        final rating = doc['overallRating'];
+        if (rating != null) {
+          totalRating += (rating as num).toDouble();
+          reviewCount++;
+        }
+      }
+
+      return reviewCount > 0 ? totalRating / reviewCount : 0.0;
+    });
   }
 }

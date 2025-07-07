@@ -28,16 +28,16 @@ class ChildDetailsPage extends StatelessWidget {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ReportPage(
-                      childName: child["name"]!,
-                      childAge: child["age"]!,
-                      parentName: child["parent"]!,
-                    ),
-                  ),
-                );
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (context) => ReportPage(
+                //       childName: child["name"]!,
+                //       childAge: child["age"]!,
+                //       parentName: child["parent"]!,
+                //     ),
+                //   ),
+                // );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrange,

@@ -20,17 +20,21 @@ class _ForgotPasswordState extends State<ForgotPassword> {
       });
 
       try {
+        // Try to send the reset email directly
         await FirebaseAuth.instance.sendPasswordResetEmail(
           email: emailController.text.trim(),
         );
+
+        // Only show success if we get here (no exception thrown)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Password reset link sent to your email!')),
         );
         Navigator.pop(context);
+
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Something went wrong. Please try again.';
         if (e.code == 'user-not-found') {
-          errorMessage = 'No user found for this email.';
+          errorMessage = 'No user found with this email address';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMessage)),
@@ -47,7 +51,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Forgot Password'),
+        title: Text('Forgot Password',style: TextStyle(color: Colors.white),),
+        leading: IconButton(onPressed: (){Navigator.pop(context);}, icon: Icon(Icons.arrow_back,color: Colors.white,)),
         backgroundColor: Colors.deepOrange,
       ),
       body: Center(

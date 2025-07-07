@@ -115,15 +115,16 @@ class RoleSelection extends StatelessWidget {
         required VoidCallback onPressed,
       }) {
     return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: color,
-        elevation: 0,
-        minimumSize: const Size(double.infinity, 80),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-          side: BorderSide(color: color.withOpacity(0.3)),
-        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.black, // This will make both text and icons black
+          elevation: 0,
+          minimumSize: const Size(double.infinity, 80),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+            side: BorderSide(color: color.withOpacity(0.3)),
+          ),
+
       ),
       onPressed: onPressed,
       child: Row(

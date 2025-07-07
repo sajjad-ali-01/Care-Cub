@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
+
+import '../../Stripe/stripe_service.dart' ;
+import 'BookingScreen.dart';
 
 class BookingsScreen extends StatelessWidget {
   @override
@@ -57,6 +62,22 @@ class BookingsScreen extends StatelessWidget {
                 (status != 'declined' || !isDeclinedMoreThanOneDay(booking));
           }).toList();
 
+          if (currentBookings.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.calendar_today, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No upcoming bookings',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return ListView.builder(
             padding: EdgeInsets.all(16),
             itemCount: currentBookings.length,
@@ -64,6 +85,7 @@ class BookingsScreen extends StatelessWidget {
               final booking = currentBookings[index].data() as Map<String, dynamic>;
               return BookingCard(
                 booking: booking,
+                bookingId: currentBookings[index].id,
                 onCancel: () async {
                   // Show confirmation dialog
                   final shouldCancel = await showDialog(
@@ -206,12 +228,31 @@ class HistoryScreen extends StatelessWidget {
                 (status == 'declined' && BookingsScreen.isDeclinedMoreThanOneDay(booking));
           }).toList();
 
+          if (historyBookings.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No booking history',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return ListView.builder(
             padding: EdgeInsets.all(16),
             itemCount: historyBookings.length,
             itemBuilder: (context, index) {
               final booking = historyBookings[index].data() as Map<String, dynamic>;
-              return HistoryCard(booking: booking);
+              return HistoryCard(
+                booking: booking,
+                bookingId: historyBookings[index].id,
+              );
             },
           );
         },
@@ -219,11 +260,17 @@ class HistoryScreen extends StatelessWidget {
     );
   }
 }
+
 class BookingCard extends StatelessWidget {
   final Map<String, dynamic> booking;
   final VoidCallback? onCancel;
+  final String bookingId;
 
-  BookingCard({required this.booking, this.onCancel});
+  BookingCard({
+    required this.booking,
+    this.onCancel,
+    required this.bookingId,
+  });
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -242,9 +289,104 @@ class BookingCard extends StatelessWidget {
     }
   }
 
+  final stripService = StripService();
+
+  Future<void> _handlePayment(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(child: CircularProgressIndicator()),
+      );
+
+      // Get the amount from booking
+      final amount = double.tryParse(booking['fees']?.toString() ?? '0') ?? 0;
+
+      // Initialize payment sheet
+      await stripService.initPaymentSheet(amount, 'usd');
+
+      // Close loading indicator
+      Navigator.pop(context);
+
+      // Show payment sheet
+      await Stripe.instance.presentPaymentSheet();
+
+      // Payment successful - update booking and create payment record
+      await _recordSuccessfulPayment(context, amount);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Payment successful!')),
+      );
+    } on StripeException catch (e) {
+      // Close loading indicator
+      Navigator.pop(context);
+
+      // Handle payment error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Payment failed: ${e.error.localizedMessage}')),
+      );
+    } catch (e) {
+      // Close loading indicator
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _recordSuccessfulPayment(BuildContext context, double amount) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not logged in');
+
+      // Create payment record
+      await FirebaseFirestore.instance.collection('Payments').add({
+        'bookingId': bookingId,
+        'userId': user.uid,
+        'doctorId': booking['doctorId'],
+        'doctorName': booking['doctorName'],
+        'clinicName': booking['clinicName'],
+        'clinicAddress': booking['clinicAddress'],
+        'patientName': booking['childName'],
+        'patientGender': booking['gender'],
+        'contactNumber': booking['contactNumber'],
+        'appointmentDate': booking['date'],
+        'appointmentTime': booking['time'],
+        'amount': amount,
+        'currency': 'usd',
+        'status': 'paid',
+        'paymentMethod': 'card',
+        'paymentDate': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update booking status to show payment was made
+      await FirebaseFirestore.instance
+          .collection('Bookings')
+          .doc(bookingId)
+          .update({
+        'paymentStatus': 'paid',
+        'paidAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to record payment: ${e.toString()}')),
+      );
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDeclined = booking['status']?.toString().toLowerCase() == 'declined';
+    final isPaid = booking['paymentStatus']?.toString().toLowerCase() == 'paid';
+    final canPay = !isPaid &&
+        (booking['status']?.toString().toLowerCase() == 'pending' ||
+            booking['status']?.toString().toLowerCase() == 'confirmed');
+
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       elevation: 4,
@@ -293,31 +435,87 @@ class BookingCard extends StatelessWidget {
               children: [
                 Icon(Icons.medical_services, color: Colors.green),
                 SizedBox(width: 10),
-                Text(
-                  booking['clinicName'] ?? 'Clinic Name',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade800,
+                Expanded(
+                  child: Text(
+                    booking['clinicName'] ?? 'Clinic Name',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             SizedBox(height: 4),
+
+            // Payment status
+            if (isPaid)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.payment, color: Colors.green, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Payment completed',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (booking['paidAt'] != null)
+                      Text(
+                        ' on ${formatDateTime(booking['paidAt'])}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(Icons.location_on, color: Colors.red),
-                SizedBox(width: 10),
-                Text(
-                  booking['clinicAddress'] ?? 'Clinic Address',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking['clinicAddress'] ?? 'Clinic Address',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ),
+                if (booking['clinicLocation'] != null)
+                  ElevatedButton(
+                    onPressed: () {
+                      final location = booking['clinicLocation'] as GeoPoint;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ClinicLocationScreen(
+                            location: LatLng(location.latitude, location.longitude),
+                            clinicName: booking['clinicName'] ?? 'Clinic',
+                            address: booking['clinicAddress'] ?? '',
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange.shade400,
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size(0, 0),
+                    ),
+                    child: Text("See on map", style: TextStyle(fontSize: 12, color: Colors.white)),
+                  ),
               ],
             ),
-
 
             SizedBox(height: 16),
             if (isDeclined && booking['declineReason'] != null)
@@ -343,6 +541,7 @@ class BookingCard extends StatelessWidget {
                   SizedBox(height: 12),
                 ],
               ),
+
             // Divider
             Divider(color: Colors.grey.shade300),
             SizedBox(height: 12),
@@ -435,22 +634,31 @@ class BookingCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 12),
-        // Created at and declined/cancelled at
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isDeclined && booking['declinedAt'] != null)
-              Text(
-                'Declined on ${formatDateTime(booking['declinedAt'])}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.red,
-                  fontStyle: FontStyle.italic,
-                ),
-              )
-          ]
-    ),
 
+            // Payment section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "PKR: ${booking['fees']}",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                  ),
+                ),
+                if (canPay)
+                  ElevatedButton(
+                    onPressed: () => _handlePayment(context),
+                    child: Text("Pay online"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 12),
 
             // Cancel button (only for pending/confirmed bookings)
             if (onCancel != null &&
@@ -506,8 +714,9 @@ class BookingCard extends StatelessWidget {
 
 class HistoryCard extends StatelessWidget {
   final Map<String, dynamic> booking;
+  final String bookingId;
 
-  HistoryCard({required this.booking});
+  HistoryCard({required this.booking, required this.bookingId});
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -525,6 +734,7 @@ class HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDeclined = booking['status']?.toString().toLowerCase() == 'declined';
+    final isPaid = booking['paymentStatus']?.toString().toLowerCase() == 'paid';
 
     return Card(
       margin: EdgeInsets.only(bottom: 16),
@@ -558,14 +768,49 @@ class HistoryCard extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
+            // Payment status in history
+            if (isPaid)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.payment, color: Colors.green, size: 16),
+                    SizedBox(width: 8),
+                    Text(
+                      'Payment completed',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (booking['paidAt'] != null)
+                      Text(
+                        ' on ${formatDateTime(booking['paidAt'])}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
             // Clinic
             Row(
               children: [
                 Icon(Icons.medical_services, color: Colors.green),
                 SizedBox(width: 8),
-                Text(
-                  booking['clinicName'] ?? 'Clinic Name',
-                  style: TextStyle(fontSize: 16),
+                Expanded(
+                  child: Text(
+                    booking['clinicName'] ?? 'Clinic Name',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -573,6 +818,7 @@ class HistoryCard extends StatelessWidget {
 
             // Address
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(Icons.location_on, color: Colors.red),
                 SizedBox(width: 8),
@@ -582,6 +828,28 @@ class HistoryCard extends StatelessWidget {
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ),
+                if (booking['clinicLocation'] != null)
+                  ElevatedButton(
+                    onPressed: () {
+                      final location = booking['clinicLocation'] as GeoPoint;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ClinicLocationScreen(
+                            location: LatLng(location.latitude, location.longitude),
+                            clinicName: booking['clinicName'] ?? 'Clinic',
+                            address: booking['clinicAddress'] ?? '',
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange.shade400,
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size(0, 0),
+                    ),
+                    child: Text("See on map", style: TextStyle(fontSize: 12, color: Colors.white)),
+                  ),
               ],
             ),
             SizedBox(height: 12),
@@ -655,6 +923,22 @@ class HistoryCard extends StatelessWidget {
                 Text(
                   'Contact: ${booking['contactNumber'] ?? 'N/A'}',
                   style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+
+            // Payment amount
+            Row(
+              children: [
+                Icon(Icons.attach_money, size: 18, color: Colors.deepOrange),
+                SizedBox(width: 8),
+                Text(
+                  'Amount: PKR ${booking['fees'] ?? 'N/A'}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -925,9 +1209,9 @@ class HistoryCard extends StatelessWidget {
                     //       .doc(previousFeedbackId)
                     //       .update(feedbackData);
                     // } else {
-                      await FirebaseFirestore.instance
-                          .collection('doctor_reviews')
-                          .add(feedbackData);
+                    await FirebaseFirestore.instance
+                        .collection('doctor_reviews')
+                        .add(feedbackData);
                     //}
 
                     // Close both dialogs
@@ -960,8 +1244,6 @@ class HistoryCard extends StatelessWidget {
       ),
     );
   }
-
-
   String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return 'N/A';
     final date = timestamp.toDate();

@@ -11,9 +11,9 @@ class BabyProfileScreen extends StatefulWidget {
 
 class _BabyProfileScreenState extends State<BabyProfileScreen> {
   TextEditingController nameController = TextEditingController();
-
   DateTime? selectedDate;
   String selectedGender = "Boy";
+  bool dateError = false;
 
   Future<void> pickDate() async {
     DateTime? pickedDate = await showDatePicker(
@@ -25,18 +25,28 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
     if (pickedDate != null) {
       setState(() {
         selectedDate = pickedDate;
+        dateError = false; // Reset error when date is selected
       });
     }
   }
-  Future<void> setUserLoggedIn() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', true);
-  }
+
 
   Future<void> saveBabyProfile() async {
+    // Validate name
     if (nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter child details')),
+      );
+      return;
+    }
+
+    // Validate date
+    if (selectedDate == null) {
+      setState(() {
+        dateError = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select the date')),
       );
       return;
     }
@@ -61,7 +71,6 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      setUserLoggedIn();
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -78,7 +87,7 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFF8C66),
+      backgroundColor: Colors.red.shade300,
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
@@ -86,16 +95,37 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 60),
-              Text("Baby Profile", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.purple.shade900)),
-              SizedBox(height: 5),
-              Text("Personalize your experience", style: TextStyle(fontSize: 16, color: Colors.black54)),
-
+              Stack(
+                children: [
+                  // White stroke (outline)
+                  Text(
+                    "Enter Child Details",
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      foreground: Paint()
+                        ..style = PaintingStyle.stroke
+                        ..strokeWidth = 2.5
+                        ..color = Colors.white,
+                    ),
+                  ),
+                  // Main text (filled color)
+                  Text(
+                    "Enter Child Details",
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple.shade900,
+                    ),
+                  ),
+                ],
+              ),
               SizedBox(height: 30),
-              Text("What’s your baby’s name?",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              Text("What's your baby's name?",
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white),
                   textAlign: TextAlign.center),
               SizedBox(height: 8),
-              Text("Or nickname", style: TextStyle(color: Colors.black54)),
+              Text("Or nickname", style: TextStyle(color: Colors.deepOrange.shade50,fontSize: 16)),
 
               SizedBox(height: 10),
               TextField(
@@ -116,16 +146,30 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
                 onTap: pickDate,
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: dateError
+                        ? Border.all(color: Colors.red, width: 2)
+                        : null, // Show red border if date is not selected
+                  ),
                   child: Text(
                     selectedDate == null ? "Tap to select Date" : "${selectedDate!.day}-${selectedDate!.month}-${selectedDate!.year}",
                     style: TextStyle(fontSize: 16, color: Colors.black),
                   ),
                 ),
               ),
+              if (dateError) // Show error text if date is not selected
+                Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    "Please select a date",
+                    style: TextStyle(color: Colors.red.shade900, fontSize: 14),
+                  ),
+                ),
 
               SizedBox(height: 25),
-              Text("Select your baby’s gender", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text("Select your baby's gender", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               SizedBox(height: 15),
 
               Row(

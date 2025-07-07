@@ -124,7 +124,6 @@ class _DoctorProfileState extends State<DoctorProfile> {
               ReviewCard(),
              // Education(),
               About(),
-              Locations(), // Updated to display clinics
               SizedBox(height: 20),
             ]),
           ),
@@ -249,7 +248,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
                     ),
                     Row(
                       children: [
-                        Icon(Icons.star, color: Colors.blueAccent.shade700, size: 24),
+                        Icon(Icons.star, color: Colors.blue.shade900, size: 24),
                         SizedBox(width: 4),
                         Text(
                           overallRating.toStringAsFixed(1),
@@ -424,34 +423,7 @@ class _DoctorProfileState extends State<DoctorProfile> {
             ),
             SizedBox(height: 8),
             Text(
-                'Child Specialist with 5 years of experience practicing at CMA Hospital- Clinic & Farooq Hospital , Lahore'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget Locations() {
-    return Card(
-      color: Colors.white,
-      elevation: 4,
-      margin: EdgeInsets.only(left: 16, right: 16, top: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Icon(Icons.location_on, color: Colors.redAccent),
-                SizedBox(width: 10),
-                Text('Practice Locations',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            ),
-            SizedBox(height: 8),
-            Image.asset("assets/images/Map.jpg")
+                'Child Specialist with experience practicing at  Hospital , Lahore'),
           ],
         ),
       ),
@@ -535,19 +507,35 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                   children: [
                     Icon(Icons.check_circle, color: Colors.green),
                     SizedBox(width: 8),
-                    Text(
-                      clinic['ClinicName'],
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    Expanded(
+                      child: Text(
+                        clinic['ClinicName'],
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 18,
+                        ),
+                        maxLines: 2,  // Allow text to span up to 2 lines
+                        overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
+                      ),
+                    )
                   ],
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 4),
                 Text(
                   'Fee: Rs. ${clinic['Fees']}',
                   style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  ' ${clinic['Address']}',
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: Colors.deepOrange.shade700,
                   ),
                 ),
                 SizedBox(height: 16),
@@ -573,13 +561,13 @@ class _ClinicDetailsState extends State<ClinicDetails> {
                           name: widget.doctorName,
                           Image: widget.doctorImage,
                           Specialization: widget.specialization,
-                          locations: clinic['Location'],
-                          clinicName: clinic['ClinicName'],
-                          Address: clinic['Address'], // Add this line
                           Secondary_Specialization: widget.Secondary_Specialization,
+                          Address: clinic['Address'],
                           qualification: widget.qualification,
                           availability: clinic['Availability'],
-                        //  initialClinicId: clinic['id'],
+                          clinicName: clinic['ClinicName'],
+                          fees: clinic['Fees'],
+                          clinicLocation: clinic['Location'], // Pass the GeoPoint
                         ),
                       ),
                     );

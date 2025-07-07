@@ -46,9 +46,7 @@ class _LoginState extends State<Login> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      showToast(message: "Error signing in. Please check your credentials.");
     }
   }
 
@@ -99,10 +97,15 @@ class _LoginState extends State<Login> {
                             fontWeight: FontWeight.w900,
                             color: Colors.deepOrange),
                       ),
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundImage:
-                        AssetImage('assets/images/careCub_Logo.jpg'),
+                      SizedBox(
+                        width: 180,
+                        height: 120,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                       SizedBox(height: 10),
                       Text(

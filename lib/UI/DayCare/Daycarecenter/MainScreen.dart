@@ -22,9 +22,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
-      DashboardPage(),
-      AppointmentsPage(onApprove: updateApprovedAppointments),
-      HistoryPage(approvedAppointments: approvedAppointments),
+      DayCareDashboard(),
+      DaycareAppointments(),
+      DaycareHistoryScreen(),
       DaycareProfileScreen(),
     ];
 

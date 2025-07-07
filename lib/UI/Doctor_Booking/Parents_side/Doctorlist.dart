@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../Database/DataBaseReadServices.dart';
+
 import 'BookingScreen.dart';
 import 'Doctor details.dart';
 import 'MyBookings.dart';
@@ -15,6 +16,23 @@ class Doctorlist extends StatefulWidget {
 class _DoctorListState extends State<Doctorlist> {
   bool isSearching = false;
   TextEditingController searchController = TextEditingController();
+  String _searchQuery = '';
+
+  void _toggleSearch() {
+    setState(() {
+      isSearching = !isSearching;
+      if (!isSearching) {
+        searchController.clear();
+        _searchQuery = '';
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,44 +44,42 @@ class _DoctorListState extends State<Doctorlist> {
         leading: isSearching
             ? null
             : IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
           icon: Icon(Icons.arrow_back, color: Colors.white),
         ),
         title: isSearching
-            ? Container(
-          width: double.infinity,
-          child: TextField(
-            controller: searchController,
-            onSubmitted: (value) {
-              setState(() {
-                isSearching = false;
-              });
-            },
-            decoration: InputDecoration(
-              hintText: "Search Doctor",
-              hintStyle: TextStyle(color: Colors.white),
-              suffixIcon: IconButton(
-                icon: Icon(Icons.send_outlined, color: Colors.white),
-                onPressed: () {
-                  setState(() {
-                    isSearching = false;
-                  });
-                },
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.white, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide(color: Colors.white, width: 2),
-              ),
-              contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+            ? TextField(
+          controller: searchController,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: "Search Doctor by Name",
+            hintStyle: TextStyle(color: Colors.white),
+            border: InputBorder.none,
+            suffixIcon: IconButton(
+              icon: Icon(Icons.search, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  searchController.clear();
+                  _searchQuery = '';
+                });
+              },
             ),
-            style: TextStyle(color: Colors.white),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(20),
+              borderSide: BorderSide(color: Colors.white, width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide(color: Colors.white, width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 20),
           ),
+          style: TextStyle(color: Colors.white),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value.toLowerCase();
+            });
+          },
         )
             : Center(
           child: Text(
@@ -71,96 +87,113 @@ class _DoctorListState extends State<Doctorlist> {
             style: TextStyle(color: Colors.white),
           ),
         ),
-        actions: isSearching
-            ? null
-            : [
+        actions: [
           IconButton(
-            icon: Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                isSearching = true;
-              });
-            },
+            icon: Icon(isSearching ? Icons.close : Icons.search, color: Colors.white),
+            onPressed: _toggleSearch,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          children: [
-            SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => BookingsScreen()));
-                    },
-                    child: Text("My Bookings", style: TextStyle(fontSize: 15)),
-                    style: OutlinedButton.styleFrom(shape: StadiumBorder()),
-                  ),
+      body: _buildDoctorList(),
+    );
+  }
+
+  Widget _buildDoctorList() {
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        children: [
+          SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => BookingsScreen()));
+                  },
+                  child: Text("My Bookings", style: TextStyle(fontSize: 15)),
+                  style: OutlinedButton.styleFrom(shape: StadiumBorder()),
                 ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    child: Text("Doctors Near Me", style: TextStyle(fontSize: 15)),
-                    style: OutlinedButton.styleFrom(shape: StadiumBorder()),
-                  ),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _toggleSearch, // Use the toggle method here
+                  child: Text("Search Doctor", style: TextStyle(fontSize: 15)),
+                  style: OutlinedButton.styleFrom(shape: StadiumBorder()),
                 ),
-              ],
-            ),
-            SizedBox(height: 10),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('Doctors').snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return ListView.builder(
-                      itemCount: 3,
-                      itemBuilder: (context, index) => ShimmerDoctorCard(),
-                    );
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(child: Text('No doctors found.'));
-                  } else {
-                    return ListView(
-                      children: snapshot.data!.docs.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        return DoctorCard(
-                          name: data['name'] ?? 'No Name',
-                          title: data['title'] ?? 'No Title',
-                          specialization: data['Primary_specialization'] ?? 'No Specialization',
-                          secondary_specialization: data['Secondary_specialization'] ?? 'No Secondary Specialization',
-                          qualification: data['Degree'] ?? 'No Qualification',
-                          experience: data['experience'] ?? 'No Experience',
-                          rating: '98% (350 Satisfied)',
-                          fee: '1800',
-                          image: data['photoUrl'],
-                          uid: doc.id,
-                          services: List<String>.from(data['Service_Offered'] ?? []),
-                          EDU_Info: List<String>.from(
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('Doctors')
+                  .where('isVerified', isEqualTo: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return ListView.builder(
+                    itemCount: 3,
+                    itemBuilder: (context, index) => ShimmerDoctorCard(),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (!snapshot.hasData) {
+                  return Center(child: Text('No doctors found.'));
+                }
+
+                // Filter doctors locally based on search query
+                final filteredDoctors = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String,dynamic>;
+                  final name = data['name']?.toString().toLowerCase() ?? '';
+
+                  // Return true if search query is empty or name matches
+                  return _searchQuery.isEmpty ||
+                      name.contains(_searchQuery.toLowerCase());
+                }).toList();
+
+                if (filteredDoctors.isEmpty && _searchQuery.isNotEmpty) {
+                  return Center(child: Text('No results for "$_searchQuery"'));
+                }
+
+                return ListView(
+                  children: filteredDoctors.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return DoctorCard(
+                      name: data['name'] ?? 'No Name',
+                      title: data['title'] ?? 'No Title',
+                      specialization: data['Primary_specialization'] ?? 'No Specialization',
+                      secondary_specialization: data['Secondary_specialization'] ?? 'No Secondary Specialization',
+                      qualification: data['Degree'] ?? 'No Qualification',
+                      experience: data['experience'] ?? 'No Experience',
+                      rating: '98% (350 Satisfied)',
+                      fee: '1800',
+                      image: data['photoUrl'],
+                      uid: doc.id,
+                      services: List<String>.from(data['Service_Offered'] ?? []),
+                      EDU_Info: List<String>.from(
                         (data['EDU_INFO'] as List<dynamic>? ?? []).map((e) {
-                          // Split on '(' or '-' and take the first part
                           final degree = e.toString()
-                              .split(RegExp(r'[\(\-]'))[0] // Split on '(' or '-'
-                              .trim(); // Remove any trailing/leading whitespace
+                              .split(RegExp(r'[\(\-]'))[0]
+                              .trim();
                           return degree;
                         }).toList(),
-                        ),
-                          conditions: List<String>.from(data['Condition'] ?? []),
-                          doctorId: doc.id, // Using document ID directly
-                        );
-                      }).toList(),
+                      ),
+                      conditions: List<String>.from(data['Condition'] ?? []),
+                      doctorId: doc.id,
                     );
-                  }
-                },
-              ),
+                  }).toList(),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -478,18 +511,50 @@ class _DoctorCardState extends State<DoctorCard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Experience: ${widget.experience} years",
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    "Experience: ${widget.experience}",
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                   ),
-                  Text(
-                    widget.rating,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  StreamBuilder<double>(
+                    stream: getOverallRatingStream(widget.doctorId), // pass your actual daycareId here
+                    builder: (context, snapshot) {
+                      // Handle different states of the stream
+                      if (snapshot.hasError) {
+                        return Text('Error loading rating');
+                      }
+
+                      if (!snapshot.hasData) {
+                        return const SizedBox(
+                          width: 50, // approximate width of the rating display
+                          child: LinearProgressIndicator(),
+                        );
+                      }
+
+                      final rating = snapshot.data ?? 0.0;
+                      final ratingText = rating.toStringAsFixed(1);
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star, color: Colors.blue.shade900, size: 18),
+                          SizedBox(width: 4),
+                          Text(
+                            ratingText,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 8,),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
               SizedBox(height: 10),
               Container(
-                height: 100,
+                height: 120,
                 child: isLoading
                     ? Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,
@@ -594,13 +659,17 @@ class _DoctorCardState extends State<DoctorCard> {
                             children: [
                               Icon(Icons.local_hospital_sharp, color: Colors.deepOrange, size: 20),
                               SizedBox(width: 8),
-                              Text(
-                                clinic['ClinicName'],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
+                              Expanded(
+                                child: Text(
+                                  clinic['ClinicName'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 2,  // Allow text to span up to 2 lines
+                                  overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
                                 ),
-                              ),
+                              )
                             ],
                           ),
                           SizedBox(height: 2),
@@ -608,13 +677,19 @@ class _DoctorCardState extends State<DoctorCard> {
                             children: [
                               Icon(Icons.location_on, color: Colors.blue, size: 15),
                               SizedBox(width: 8),
-                              Text(
-                                clinic['Address'],
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 13,
+                              Expanded(
+                                child: Text(
+                                  clinic['Address'],
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 2,  // Allow text to span up to 2 lines
+                                  overflow: TextOverflow.ellipsis,  // Show ellipsis if text is still too long
                                 ),
-                              ),
+                              )
+
+
                             ],
                           ),
                           Row(
@@ -642,7 +717,7 @@ class _DoctorCardState extends State<DoctorCard> {
                                 ),
                               ),
                               Text(
-                                'Book online & Get 10% OFF',
+                                'Pay online & Get 10% OFF',
                                 style: TextStyle(
                                   color: Colors.green.shade600,
                                   fontSize: 12,
@@ -672,16 +747,18 @@ class _DoctorCardState extends State<DoctorCard> {
                             builder: (context) => BookingScreen(
                               doctorId: widget.doctorId,
                               name: widget.name,
-                              clinicName: clinics[0]['ClinicName'],
                               Image: widget.image,
                               Specialization: widget.specialization,
-                              locations: clinics[0]['Location'],
-                              Address: clinics[0]['Address'],
-                              availability: clinics[0]['Availability'],
                               Secondary_Specialization: widget.secondary_specialization,
+                               // Make sure this exists
+                              Address: clinics[0]['Address'],
                               qualification: widget.EDU_Info.isNotEmpty
-                                  ? widget.EDU_Info.join(", ")  // Combine list items into a comma-separated string
+                                  ? widget.EDU_Info.join(", ")
                                   : 'No education info available',
+                              availability: clinics[0]['Availability'],
+                              clinicName: clinics[0]['ClinicName'],
+                              fees: clinics[0]['Fees'],
+                              clinicLocation: clinics[0]['Location'] as GeoPoint, // This is crucial
                             ),
                           ),
                         );
@@ -705,6 +782,28 @@ class _DoctorCardState extends State<DoctorCard> {
         ),
       ),
     );
+  }
+  Stream<double> getOverallRatingStream(String daycareId) {
+    return FirebaseFirestore.instance
+        .collection('doctor_reviews')
+        .where('doctorId', isEqualTo: daycareId)
+        .snapshots()
+        .map((querySnapshot) {
+      if (querySnapshot.docs.isEmpty) return 0.0;
+
+      double totalRating = 0;
+      int reviewCount = 0;
+
+      for (var doc in querySnapshot.docs) {
+        final rating = doc['overallRating'];
+        if (rating != null) {
+          totalRating += (rating as num).toDouble();
+          reviewCount++;
+        }
+      }
+
+      return reviewCount > 0 ? totalRating / reviewCount : 0.0;
+    });
   }
 
   void showHospitalSelection(BuildContext context) {
@@ -755,16 +854,17 @@ class _DoctorCardState extends State<DoctorCard> {
                           builder: (context) => BookingScreen(
                             doctorId: widget.doctorId,
                             name: widget.name,
-                            clinicName: clinic['ClinicName'],
                             Image: widget.image,
                             Specialization: widget.specialization,
-                            locations: clinic['Location'],
-                            Address: clinic['Address'],
-                            availability: clinic['Availability'],
                             Secondary_Specialization: widget.secondary_specialization,
+                            Address: clinic['Address'],
                             qualification: widget.EDU_Info.isNotEmpty
-                          ? widget.EDU_Info.join(", ")
+                                ? widget.EDU_Info.join(", ")
                                 : 'No education info available',
+                            availability: clinic['Availability'],
+                            clinicName: clinic['ClinicName'],
+                            fees: clinic['Fees'],
+                            clinicLocation: clinic['Location'], // This is crucial
                           ),
                         ),
                       );
