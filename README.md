@@ -38,10 +38,10 @@
       <img src="https://github.com/user-attachments/assets/630231db-3c78-40ee-8429-99d10eff35cd" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
       <sub><strong>Model's perdictions results</strong></sub>
     </td>
-    <td align="center">
+<!--     <td align="center">
       <img src="https://github.com/user-attachments/assets/630231db-3c78-40ee-8429-99d10eff35cd" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
       <sub><strong>Real time Model's perdictions results</strong></sub>
-    </td>
+    </td> -->
   </tr>
 </table>
 
