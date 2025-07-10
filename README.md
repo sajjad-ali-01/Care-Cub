@@ -38,10 +38,14 @@
       <img src="https://github.com/user-attachments/assets/630231db-3c78-40ee-8429-99d10eff35cd" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
       <sub><strong>Model's perdictions results</strong></sub>
     </td>
-<!--     <td align="center">
-      <img src="https://github.com/user-attachments/assets/630231db-3c78-40ee-8429-99d10eff35cd" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/d4f853f5-4446-4338-baab-f008a31065f3" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
       <sub><strong>Real time Model's perdictions results</strong></sub>
-    </td> -->
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/e3fa3cbc-2db6-44f8-9862-ae39634aca2d" alt="Model's perdictions results" width="200" height="350" style="border-radius:8px; border:1px solid #eee;"><br>
+      <sub><strong>Real time Model's perdictions results</strong></sub>
+    </td>
   </tr>
 </table>
 
