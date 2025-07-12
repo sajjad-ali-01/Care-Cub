@@ -250,17 +250,26 @@ dependencies:
    - Connect with local daycare centers and read reviews
    - Track developmental milestones and compare with averages
 
-## Contributions
+## 👨‍💻 Author
 
-Contributions to Care Cub are welcome! If you find any issues or want to suggest new features, please open an issue or submit a pull request.
+**Sajjad Ali**
+📧 \[[sajjad.218ali@gmail.com](mailto:sajjad.218ali@gmail.com)]
+🔗 [LinkedIn Profile](https://linkedin.com/in/sajjadali116)
 
-## License
+---
 
-This project is licensed under the GNU License - see the [LICENSE](LICENSE) file for details.
+## 💬 Contributions
 
-## Contact
+Contributions, issues, and feature requests are welcome!
+Feel free to open an issue or submit a pull request.
 
-For support or inquiries, please contact: [sajjad.218ali@gmail.com](mailto:sajjad.218ali@gmail.com)
+---
+
+## ⭐️ Star This Repo
+
+If you find this project useful, please give it a ⭐️ to help others discover it.
+
+---
 
 ---
 
